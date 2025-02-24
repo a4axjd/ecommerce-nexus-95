@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
+import { useCart } from "@/context/CartContext";
 
 const PRODUCTS = [
   {
@@ -22,6 +23,7 @@ const ProductDetail = () => {
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string>("");
+  const { addToCart } = useCart();
   
   const product = PRODUCTS.find(p => p.id === id);
   
@@ -35,8 +37,16 @@ const ProductDetail = () => {
       return;
     }
     
+    addToCart({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      image: product.image,
+      size: selectedSize,
+      quantity,
+    });
+    
     toast.success("Added to cart");
-    // TODO: Implement cart functionality
   };
 
   return (
