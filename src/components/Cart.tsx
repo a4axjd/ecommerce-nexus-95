@@ -1,11 +1,16 @@
-
 import { X, Minus, Plus, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export const Cart = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const { state, removeFromCart, updateQuantity } = useCart();
+  const navigate = useNavigate();
+
+  const handleCheckout = () => {
+    onClose();
+    navigate("/checkout");
+  };
 
   return (
     <>
@@ -96,7 +101,7 @@ export const Cart = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void
                 <span>Total</span>
                 <span>${state.total.toFixed(2)}</span>
               </div>
-              <Button className="w-full" size="lg">
+              <Button className="w-full" size="lg" onClick={handleCheckout}>
                 Checkout
               </Button>
             </div>
