@@ -24,11 +24,11 @@ export const Navbar = () => {
             <Link to="/products" className="hover:text-gray-600 transition-colors">
               All Products
             </Link>
-            <Link to="/categories" className="hover:text-gray-600 transition-colors">
-              Categories
-            </Link>
             <Link to="/about" className="hover:text-gray-600 transition-colors">
               About
+            </Link>
+            <Link to="/contact" className="hover:text-gray-600 transition-colors">
+              Contact
             </Link>
           </div>
           
