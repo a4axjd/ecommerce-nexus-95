@@ -27,3 +27,13 @@ export interface MedusaCollection {
   title: string;
   handle: string;
 }
+
+export interface CartItem {
+  variant_id: string;
+  quantity: number;
+}
+
+export interface Cart {
+  id: string;
+  items: CartItem[];
+}

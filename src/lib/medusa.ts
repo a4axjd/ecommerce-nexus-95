@@ -1,5 +1,5 @@
 
-import { Medusa } from "@medusajs/medusa-js";
+import Medusa from "@medusajs/medusa-js";
 
 // Initialize the Medusa client
 const medusa = new Medusa({
