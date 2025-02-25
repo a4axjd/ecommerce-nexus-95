@@ -1,5 +1,5 @@
-
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, ShoppingBag, Truck, Clock, Shield } from "lucide-react";
@@ -49,10 +49,10 @@ const CATEGORIES = [
 
 const Index = () => {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main>
+      <main className="flex-grow">
         {/* Hero Section */}
         <section className="relative h-[80vh] flex items-center justify-center bg-gray-50">
           <div 
@@ -175,6 +175,8 @@ const Index = () => {
           </div>
         </section>
       </main>
+
+      <Footer />
     </div>
   );
 };
