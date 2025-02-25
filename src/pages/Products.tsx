@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { ProductCard } from "@/components/ProductCard";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,74 +11,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
-
-// This structure matches Medusa's product and category schema
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  image: string;
-  category: Category;
-}
-
-interface Category {
-  id: string;
-  name: string;
-}
-
-// Temporary data - will be replaced with Medusa data
-const CATEGORIES: Category[] = [
-  { id: "clothing", name: "Clothing" },
-  { id: "accessories", name: "Accessories" },
-];
-
-const PRODUCTS: Product[] = [
-  {
-    id: "1",
-    title: "Premium T-Shirt",
-    price: 29.99,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&auto=format&fit=crop&q=60",
-    category: { id: "clothing", name: "Clothing" }
-  },
-  {
-    id: "2",
-    title: "Designer Watch",
-    price: 199.99,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60",
-    category: { id: "accessories", name: "Accessories" }
-  },
-  {
-    id: "3",
-    title: "Leather Bag",
-    price: 149.99,
-    image: "https://images.unsplash.com/photo-1491637639811-60e2756cc1c7?w=800&auto=format&fit=crop&q=60",
-    category: { id: "accessories", name: "Accessories" }
-  },
-  {
-    id: "4",
-    title: "Sunglasses",
-    price: 89.99,
-    image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&auto=format&fit=crop&q=60",
-    category: { id: "accessories", name: "Accessories" }
-  }
-];
+import { useProducts } from "@/hooks/useProducts";
 
 type SortOption = "price-asc" | "price-desc" | "name-asc" | "name-desc";
 
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
+  
+  const { data: products = [], isLoading } = useProducts();
 
-  const filteredProducts = selectedCategory === "all" 
-    ? PRODUCTS 
-    : PRODUCTS.filter(product => product.category.id === selectedCategory);
+  const filteredProducts = products;
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
+    const aPrice = a.variants[0]?.prices[0]?.amount || 0;
+    const bPrice = b.variants[0]?.prices[0]?.amount || 0;
+    
     switch (sortBy) {
       case "price-asc":
-        return a.price - b.price;
+        return aPrice - bPrice;
       case "price-desc":
-        return b.price - a.price;
+        return bPrice - aPrice;
       case "name-asc":
         return a.title.localeCompare(b.title);
       case "name-desc":
@@ -88,39 +42,15 @@ const Products = () => {
   });
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="pt-24">
+      <main className="flex-grow pt-24">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-semibold">All Products</h1>
             
-            <div className="flex items-center gap-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-2">
-                    {selectedCategory === "all" 
-                      ? "All Categories" 
-                      : CATEGORIES.find(cat => cat.id === selectedCategory)?.name}
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={() => setSelectedCategory("all")}>
-                    All Categories
-                  </DropdownMenuItem>
-                  {CATEGORIES.map((category) => (
-                    <DropdownMenuItem 
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                    >
-                      {category.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
+            <div className="flex items-center gap-4">              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="flex items-center gap-2">
@@ -146,19 +76,39 @@ const Products = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {sortedProducts.map((product) => (
-              <ProductCard key={product.id} {...product} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="bg-gray-200 aspect-square rounded-lg mb-2" />
+                  <div className="bg-gray-200 h-4 w-3/4 rounded mb-2" />
+                  <div className="bg-gray-200 h-4 w-1/4 rounded" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {sortedProducts.map((product) => (
+                <ProductCard 
+                  key={product.id}
+                  id={product.id}
+                  title={product.title}
+                  price={product.variants[0]?.prices[0]?.amount / 100 || 0}
+                  image={product.thumbnail}
+                />
+              ))}
+            </div>
+          )}
 
-          {sortedProducts.length === 0 && (
+          {!isLoading && sortedProducts.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500">No products found in this category.</p>
+              <p className="text-gray-500">No products found.</p>
             </div>
           )}
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };
