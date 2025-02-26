@@ -1,14 +1,22 @@
 
 import { useQuery } from "@tanstack/react-query";
-import medusa from "@/lib/medusa";
-import { MedusaProduct } from "@/types/medusa";
 
+export interface Product {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  image: string;
+  category: string;
+}
+
+// This is a temporary mock implementation until we integrate Firebase
 export const useProducts = () => {
   return useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      const { products } = await medusa.products.list();
-      return products as MedusaProduct[];
+      // TODO: Replace with Firebase query
+      return [] as Product[];
     },
   });
 };
@@ -17,8 +25,8 @@ export const useProduct = (id: string) => {
   return useQuery({
     queryKey: ["product", id],
     queryFn: async () => {
-      const { product } = await medusa.products.retrieve(id);
-      return product as MedusaProduct;
+      // TODO: Replace with Firebase query
+      return null as Product | null;
     },
     enabled: !!id,
   });

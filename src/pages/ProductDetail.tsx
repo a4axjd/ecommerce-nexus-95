@@ -12,7 +12,6 @@ import { useProduct } from "@/hooks/useProducts";
 const ProductDetail = () => {
   const { id } = useParams();
   const [quantity, setQuantity] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState<string>("");
   const { addToCart } = useCart();
   
   const { data: product, isLoading } = useProduct(id || "");
@@ -51,20 +50,11 @@ const ProductDetail = () => {
   }
 
   const handleAddToCart = () => {
-    if (!selectedVariant) {
-      toast.error("Please select a variant");
-      return;
-    }
-    
-    const variant = product.variants.find(v => v.id === selectedVariant);
-    if (!variant) return;
-    
     addToCart({
       id: product.id,
       title: product.title,
-      price: variant.prices[0]?.amount / 100 || 0,
-      image: product.thumbnail,
-      size: variant.title,
+      price: product.price,
+      image: product.image,
       quantity,
     });
     
@@ -81,7 +71,7 @@ const ProductDetail = () => {
             {/* Product Image */}
             <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
               <img
-                src={product.thumbnail}
+                src={product.image}
                 alt={product.title}
                 className="h-full w-full object-cover"
               />
@@ -90,27 +80,8 @@ const ProductDetail = () => {
             {/* Product Details */}
             <div className="space-y-6">
               <h1 className="text-3xl font-semibold">{product.title}</h1>
-              <p className="text-2xl">
-                ${(product.variants[0]?.prices[0]?.amount / 100 || 0).toFixed(2)}
-              </p>
+              <p className="text-2xl">${product.price.toFixed(2)}</p>
               <p className="text-gray-600">{product.description}</p>
-
-              {/* Variant Selection */}
-              <div className="space-y-4">
-                <h3 className="font-medium">Select Variant</h3>
-                <div className="flex gap-2">
-                  {product.variants.map((variant) => (
-                    <Button
-                      key={variant.id}
-                      variant={selectedVariant === variant.id ? "default" : "outline"}
-                      onClick={() => setSelectedVariant(variant.id)}
-                      className="w-12 h-12"
-                    >
-                      {variant.title}
-                    </Button>
-                  ))}
-                </div>
-              </div>
 
               {/* Quantity Selection */}
               <div className="space-y-4">

@@ -24,14 +24,11 @@ const Products = () => {
   const filteredProducts = products;
 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
-    const aPrice = a.variants[0]?.prices[0]?.amount || 0;
-    const bPrice = b.variants[0]?.prices[0]?.amount || 0;
-    
     switch (sortBy) {
       case "price-asc":
-        return aPrice - bPrice;
+        return a.price - b.price;
       case "price-desc":
-        return bPrice - aPrice;
+        return b.price - a.price;
       case "name-asc":
         return a.title.localeCompare(b.title);
       case "name-desc":
@@ -93,8 +90,8 @@ const Products = () => {
                   key={product.id}
                   id={product.id}
                   title={product.title}
-                  price={product.variants[0]?.prices[0]?.amount / 100 || 0}
-                  image={product.thumbnail}
+                  price={product.price}
+                  image={product.image}
                 />
               ))}
             </div>
