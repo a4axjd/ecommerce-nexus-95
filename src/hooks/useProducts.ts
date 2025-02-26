@@ -1,5 +1,7 @@
 
 import { useQuery } from "@tanstack/react-query";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export interface Product {
   id: string;
@@ -10,13 +12,15 @@ export interface Product {
   category: string;
 }
 
-// This is a temporary mock implementation until we integrate Firebase
 export const useProducts = () => {
   return useQuery({
     queryKey: ["products"],
     queryFn: async () => {
-      // TODO: Replace with Firebase query
-      return [] as Product[];
+      const querySnapshot = await getDocs(collection(db, "products"));
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Product[];
     },
   });
 };
@@ -25,8 +29,13 @@ export const useProduct = (id: string) => {
   return useQuery({
     queryKey: ["product", id],
     queryFn: async () => {
-      // TODO: Replace with Firebase query
-      return null as Product | null;
+      const docRef = doc(db, "products", id);
+      const docSnap = await getDoc(docRef);
+      if (!docSnap.exists()) return null;
+      return {
+        id: docSnap.id,
+        ...docSnap.data()
+      } as Product;
     },
     enabled: !!id,
   });
