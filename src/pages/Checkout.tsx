@@ -1,191 +1,187 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
-import { toast } from "sonner";
-
-interface ShippingMethod {
-  id: string;
-  name: string;
-  price: number;
-  estimatedDays: string;
-}
-
-const SHIPPING_METHODS: ShippingMethod[] = [
-  {
-    id: "standard",
-    name: "Standard Shipping",
-    price: 4.99,
-    estimatedDays: "3-5 business days",
-  },
-  {
-    id: "express",
-    name: "Express Shipping",
-    price: 14.99,
-    estimatedDays: "1-2 business days",
-  },
-];
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { state } = useCart();
-  const [selectedShipping, setSelectedShipping] = useState<string>(SHIPPING_METHODS[0].id);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    name: "",
+    address: "",
+    city: "",
+    country: "",
+    postalCode: "",
+  });
 
-  const selectedMethod = SHIPPING_METHODS.find(method => method.id === selectedShipping)!;
-  const total = state.total + selectedMethod.price;
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsProcessing(true);
+    // Handle checkout logic here
+    navigate("/order-confirmation");
+  };
 
-    try {
-      // TODO: Integrate with Medusa.js checkout API
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulating API call
-      toast.success("Order placed successfully!");
-      navigate("/order-confirmation");
-    } catch (error) {
-      toast.error("Failed to place order. Please try again.");
-    } finally {
-      setIsProcessing(false);
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   if (state.items.length === 0) {
     return (
-      <div className="min-h-screen pt-20 px-4">
-        <div className="max-w-4xl mx-auto text-center py-12">
-          <h2 className="text-2xl font-semibold mb-4">Your cart is empty</h2>
-          <Button onClick={() => navigate("/products")}>Continue Shopping</Button>
-        </div>
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-grow container mx-auto px-4 pt-24">
+          <div className="text-center">
+            <h1 className="text-2xl font-semibold mb-4">Your cart is empty</h1>
+            <Button onClick={() => navigate("/products")}>Continue Shopping</Button>
+          </div>
+        </main>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen pt-20 px-4">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-semibold mb-8">Checkout</h1>
+    <div className="min-h-screen flex flex-col">
+      <Navbar />
+      
+      <main className="flex-grow container mx-auto px-4 pt-24">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl font-semibold mb-8">Checkout</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Checkout Form */}
-          <div>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="bg-white p-6 rounded-lg border space-y-4">
-                <h2 className="text-xl font-semibold">Contact Information</h2>
-                <Input type="email" placeholder="Email" required />
-              </div>
-
-              <div className="bg-white p-6 rounded-lg border space-y-4">
-                <h2 className="text-xl font-semibold">Shipping Address</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <Input placeholder="First name" required />
-                  <Input placeholder="Last name" required />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Checkout Form */}
+            <div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-1">
+                    Email
+                  </label>
+                  <Input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                  />
                 </div>
-                <Input placeholder="Address" required />
-                <Input placeholder="Apartment, suite, etc. (optional)" />
-                <div className="grid grid-cols-2 gap-4">
-                  <Input placeholder="City" required />
-                  <Input placeholder="Postal code" required />
-                </div>
-              </div>
 
-              <div className="bg-white p-6 rounded-lg border space-y-4">
-                <h2 className="text-xl font-semibold">Shipping Method</h2>
-                <div className="space-y-3">
-                  {SHIPPING_METHODS.map((method) => (
-                    <label
-                      key={method.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border cursor-pointer transition-colors ${
-                        selectedShipping === method.id
-                          ? "border-black bg-gray-50"
-                          : "hover:border-gray-400"
-                      }`}
-                    >
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="radio"
-                          name="shipping"
-                          value={method.id}
-                          checked={selectedShipping === method.id}
-                          onChange={(e) => setSelectedShipping(e.target.value)}
-                          className="h-4 w-4"
-                        />
-                        <div>
-                          <p className="font-medium">{method.name}</p>
-                          <p className="text-sm text-gray-500">
-                            {method.estimatedDays}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="font-medium">
-                        ${method.price.toFixed(2)}
-                      </span>
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium mb-1">
+                    Full Name
+                  </label>
+                  <Input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="address" className="block text-sm font-medium mb-1">
+                    Address
+                  </label>
+                  <Input
+                    type="text"
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="city" className="block text-sm font-medium mb-1">
+                      City
                     </label>
-                  ))}
+                    <Input
+                      type="text"
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="postalCode" className="block text-sm font-medium mb-1">
+                      Postal Code
+                    </label>
+                    <Input
+                      type="text"
+                      id="postalCode"
+                      name="postalCode"
+                      value={formData.postalCode}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <Button
-                type="submit"
-                className="w-full"
-                size="lg"
-                disabled={isProcessing}
-              >
-                {isProcessing ? "Processing..." : `Pay $${total.toFixed(2)}`}
-              </Button>
-            </form>
-          </div>
+                <div>
+                  <label htmlFor="country" className="block text-sm font-medium mb-1">
+                    Country
+                  </label>
+                  <Input
+                    type="text"
+                    id="country"
+                    name="country"
+                    value={formData.country}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
 
-          {/* Order Summary */}
-          <div className="lg:pl-8">
-            <div className="bg-white p-6 rounded-lg border sticky top-24">
-              <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
+                <Button type="submit" className="w-full">
+                  Place Order
+                </Button>
+              </form>
+            </div>
+
+            {/* Order Summary */}
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
+              
               <div className="space-y-4">
                 {state.items.map((item) => (
-                  <div
-                    key={`${item.id}-${item.size}`}
-                    className="flex gap-4 py-4 border-b"
-                  >
-                    <img
-                      src={item.image}
-                      alt={item.title}
-                      className="h-20 w-20 object-cover rounded"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-medium">{item.title}</h3>
-                      <p className="text-sm text-gray-500">Size: {item.size}</p>
-                      <p className="text-sm text-gray-500">
+                  <div key={item.id} className="flex justify-between">
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">
                         Quantity: {item.quantity}
                       </p>
-                      <p className="font-medium mt-1">
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </p>
                     </div>
+                    <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
                   </div>
                 ))}
 
-                <div className="space-y-2 pt-4">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>${state.total.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Shipping</span>
-                    <span>${selectedMethod.price.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+                <div className="border-t pt-4">
+                  <div className="flex justify-between font-semibold">
                     <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>${state.total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      <Footer />
     </div>
   );
 };
