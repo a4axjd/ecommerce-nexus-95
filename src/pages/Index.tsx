@@ -1,36 +1,12 @@
+
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ShoppingBag, Truck, Clock, Shield } from "lucide-react";
+import { ArrowRight, ShoppingBag, Truck, Clock, Shield, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const FEATURED_PRODUCTS = [
-  {
-    id: "1",
-    title: "Premium T-Shirt",
-    price: 29.99,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=800&auto=format&fit=crop&q=60"
-  },
-  {
-    id: "2",
-    title: "Designer Watch",
-    price: 199.99,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60"
-  },
-  {
-    id: "3",
-    title: "Leather Bag",
-    price: 149.99,
-    image: "https://images.unsplash.com/photo-1491637639811-60e2756cc1c7?w=800&auto=format&fit=crop&q=60"
-  },
-  {
-    id: "4",
-    title: "Sunglasses",
-    price: 89.99,
-    image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=800&auto=format&fit=crop&q=60"
-  },
-];
+import { useFeaturedProducts } from "@/hooks/useProducts";
+import { useFeaturedBlogs } from "@/hooks/useBlogs";
 
 const CATEGORIES = [
   {
@@ -48,6 +24,9 @@ const CATEGORIES = [
 ];
 
 const Index = () => {
+  const { data: featuredProducts, isLoading: productsLoading } = useFeaturedProducts();
+  const { data: featuredBlogs, isLoading: blogsLoading } = useFeaturedBlogs();
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -121,16 +100,85 @@ const Index = () => {
                 </Button>
               </Link>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {FEATURED_PRODUCTS.map((product) => (
-                <ProductCard key={product.id} {...product} />
-              ))}
+            {productsLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : featuredProducts && featuredProducts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {featuredProducts.map((product) => (
+                  <ProductCard key={product.id} {...product} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>No featured products available.</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Featured Blogs */}
+        <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-semibold">Featured Blog Posts</h2>
+              <Link to="/blogs">
+                <Button variant="ghost" className="group">
+                  View All
+                  <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
             </div>
+            {blogsLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+              </div>
+            ) : featuredBlogs && featuredBlogs.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {featuredBlogs.map((blog) => (
+                  <Link 
+                    key={blog.id} 
+                    to={`/blogs/${blog.id}`}
+                    className="bg-white rounded-lg overflow-hidden shadow-md transition-transform hover:scale-[1.02]"
+                  >
+                    <div className="h-48 overflow-hidden">
+                      <img 
+                        src={blog.imageUrl} 
+                        alt={blog.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <h3 className="font-semibold text-lg mb-2">{blog.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        By {blog.author} | {new Date(blog.createdAt).toLocaleDateString()}
+                      </p>
+                      <div className="flex gap-2 mb-3">
+                        {blog.tags.slice(0, 3).map((tag, i) => (
+                          <span key={i} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex items-center text-primary text-sm font-medium">
+                        Read more
+                        <BookOpen className="ml-1 h-4 w-4" />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>No featured blog posts available.</p>
+              </div>
+            )}
           </div>
         </section>
 
         {/* Categories Section */}
-        <section className="py-16 bg-gray-50">
+        <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <h2 className="text-2xl font-semibold mb-8">Shop by Category</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -155,7 +203,7 @@ const Index = () => {
         </section>
 
         {/* Newsletter Section */}
-        <section className="py-16 bg-white">
+        <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto text-center">
               <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-gray-700" />

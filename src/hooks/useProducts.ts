@@ -10,6 +10,7 @@ export interface Product {
   price: number;
   image: string;
   category: string;
+  featured?: boolean;
 }
 
 export const useProducts = () => {
@@ -21,6 +22,21 @@ export const useProducts = () => {
         id: doc.id,
         ...doc.data()
       })) as Product[];
+    },
+  });
+};
+
+export const useFeaturedProducts = () => {
+  return useQuery({
+    queryKey: ["featuredProducts"],
+    queryFn: async () => {
+      const querySnapshot = await getDocs(collection(db, "products"));
+      return querySnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(product => product.featured === true) as Product[];
     },
   });
 };

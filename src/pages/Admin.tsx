@@ -7,12 +7,14 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProducts, Product } from "@/hooks/useProducts";
-import { Pencil, Trash, LogOut } from "lucide-react";
+import { Pencil, Trash, LogOut, BookText, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const Admin = () => {
   const { currentUser, signOut } = useAuth();
+  const navigate = useNavigate();
   const { data: products, refetch } = useProducts();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,12 +23,18 @@ const Admin = () => {
     description: "",
     price: "",
     category: "",
-    image: "", // Changed from File to string for image URL
+    image: "",
+    featured: false,
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,6 +58,7 @@ const Admin = () => {
         price: parseFloat(formData.price),
         category: formData.category,
         image: formData.image,
+        featured: formData.featured,
       };
 
       console.log("Product data prepared:", productData);
@@ -80,6 +89,7 @@ const Admin = () => {
         price: "",
         category: "",
         image: "",
+        featured: false,
       });
       setSelectedProduct(null);
       
@@ -105,6 +115,7 @@ const Admin = () => {
       price: product.price.toString(),
       category: product.category,
       image: product.image,
+      featured: product.featured || false,
     });
   };
 
@@ -130,6 +141,10 @@ const Admin = () => {
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
             <div className="flex items-center gap-4">
+              <Button variant="outline" onClick={() => navigate("/admin/blogs")}>
+                <BookText className="h-4 w-4 mr-2" />
+                Manage Blogs
+              </Button>
               <p className="text-sm text-muted-foreground">
                 Signed in as {currentUser?.email}
               </p>
@@ -220,6 +235,20 @@ const Admin = () => {
                   />
                 </div>
 
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="featured"
+                    name="featured"
+                    checked={formData.featured}
+                    onChange={handleCheckboxChange}
+                    className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                  />
+                  <label htmlFor="featured" className="block text-sm font-medium">
+                    Feature on Home Page
+                  </label>
+                </div>
+
                 <div className="flex gap-4">
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting 
@@ -241,6 +270,7 @@ const Admin = () => {
                           price: "",
                           category: "",
                           image: "",
+                          featured: false,
                         });
                       }}
                       disabled={isSubmitting}
@@ -261,11 +291,18 @@ const Admin = () => {
                     className="flex items-center justify-between p-4 border rounded-lg"
                   >
                     <div className="flex items-center gap-4">
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className="w-16 h-16 object-cover rounded"
-                      />
+                      <div className="relative">
+                        <img
+                          src={product.image}
+                          alt={product.title}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                        {product.featured && (
+                          <div className="absolute -top-2 -right-2 bg-yellow-400 rounded-full p-1" title="Featured on home page">
+                            <Star className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <h3 className="font-medium">{product.title}</h3>
                         <p className="text-sm text-muted-foreground">

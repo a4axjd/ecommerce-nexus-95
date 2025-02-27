@@ -11,6 +11,7 @@ export interface Blog {
   imageUrl: string;
   createdAt: number;
   tags: string[];
+  featured?: boolean;
 }
 
 export const useBlogs = () => {
@@ -23,6 +24,21 @@ export const useBlogs = () => {
           id: doc.id,
           ...doc.data(),
         })) as Blog[];
+    },
+  });
+};
+
+export const useFeaturedBlogs = () => {
+  return useQuery({
+    queryKey: ["featuredBlogs"],
+    queryFn: async () => {
+      const querySnapshot = await getDocs(collection(db, "blogs"));
+      return querySnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter(blog => blog.featured === true) as Blog[];
     },
   });
 };
@@ -54,6 +70,7 @@ export const useCreateBlog = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blogs"] });
+      queryClient.invalidateQueries({ queryKey: ["featuredBlogs"] });
     },
   });
 };
@@ -69,6 +86,7 @@ export const useUpdateBlog = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["blogs"] });
       queryClient.invalidateQueries({ queryKey: ["blog", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["featuredBlogs"] });
     },
   });
 };
@@ -83,6 +101,7 @@ export const useDeleteBlog = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["blogs"] });
+      queryClient.invalidateQueries({ queryKey: ["featuredBlogs"] });
     },
   });
 };

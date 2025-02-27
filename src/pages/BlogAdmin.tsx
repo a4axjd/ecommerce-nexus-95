@@ -5,7 +5,7 @@ import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useBlogs, useCreateBlog, useUpdateBlog, useDeleteBlog, Blog } from "@/hooks/useBlogs";
-import { Pencil, Trash, LogOut, PlusCircle } from "lucide-react";
+import { Pencil, Trash, LogOut, PlusCircle, ShoppingBag, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -26,11 +26,17 @@ const BlogAdmin = () => {
     author: "",
     imageUrl: "",
     tags: "",
+    featured: false,
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,6 +58,7 @@ const BlogAdmin = () => {
         imageUrl: formData.imageUrl,
         tags: formData.tags.split(',').map(tag => tag.trim()),
         createdAt: selectedBlog?.createdAt || Date.now(),
+        featured: formData.featured,
       };
 
       if (selectedBlog) {
@@ -72,6 +79,7 @@ const BlogAdmin = () => {
         author: "",
         imageUrl: "",
         tags: "",
+        featured: false,
       });
       setSelectedBlog(null);
     } catch (error) {
@@ -90,6 +98,7 @@ const BlogAdmin = () => {
       author: blog.author,
       imageUrl: blog.imageUrl,
       tags: blog.tags.join(', '),
+      featured: blog.featured || false,
     });
   };
 
@@ -115,6 +124,7 @@ const BlogAdmin = () => {
             <h1 className="text-2xl font-semibold">Blog Management</h1>
             <div className="flex items-center gap-4">
               <Button variant="outline" onClick={() => navigate("/admin")}>
+                <ShoppingBag className="h-4 w-4 mr-2" />
                 Manage Products
               </Button>
               <p className="text-sm text-muted-foreground">
@@ -192,6 +202,20 @@ const BlogAdmin = () => {
                   />
                 </div>
 
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="featured"
+                    name="featured"
+                    checked={formData.featured}
+                    onChange={handleCheckboxChange}
+                    className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
+                  />
+                  <label htmlFor="featured" className="block text-sm font-medium">
+                    Feature on Home Page
+                  </label>
+                </div>
+
                 <div>
                   <label htmlFor="content" className="block text-sm font-medium mb-1">
                     Content
@@ -227,6 +251,7 @@ const BlogAdmin = () => {
                           author: "",
                           imageUrl: "",
                           tags: "",
+                          featured: false,
                         });
                       }}
                       disabled={isSubmitting}
@@ -255,6 +280,7 @@ const BlogAdmin = () => {
                       author: "",
                       imageUrl: "",
                       tags: "",
+                      featured: false,
                     });
                   }}>
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -269,11 +295,18 @@ const BlogAdmin = () => {
                       className="flex items-center justify-between p-4 border rounded-lg"
                     >
                       <div className="flex items-center gap-4">
-                        <img
-                          src={blog.imageUrl}
-                          alt={blog.title}
-                          className="w-16 h-16 object-cover rounded"
-                        />
+                        <div className="relative">
+                          <img
+                            src={blog.imageUrl}
+                            alt={blog.title}
+                            className="w-16 h-16 object-cover rounded"
+                          />
+                          {blog.featured && (
+                            <div className="absolute -top-2 -right-2 bg-yellow-400 rounded-full p-1" title="Featured on home page">
+                              <Star className="h-3 w-3 text-white" />
+                            </div>
+                          )}
+                        </div>
                         <div>
                           <h3 className="font-medium">{blog.title}</h3>
                           <p className="text-sm text-muted-foreground">
