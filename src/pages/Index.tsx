@@ -118,8 +118,54 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Featured Blogs */}
+        {/* Categories Section */}
+        <section className="py-16 bg-white">
+          <div className="container mx-auto px-4">
+            <h2 className="text-2xl font-semibold mb-8">Shop by Category</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {CATEGORIES.map((category) => (
+                <Link
+                  key={category.name}
+                  to="/products"
+                  className="group relative h-64 rounded-lg overflow-hidden"
+                >
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center transform group-hover:scale-105 transition-transform duration-300"
+                    style={{ backgroundImage: `url(${category.image})` }}
+                  />
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <h3 className="text-white text-2xl font-semibold">{category.name}</h3>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Newsletter Section */}
         <section className="py-16 bg-gray-50">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto text-center">
+              <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-gray-700" />
+              <h2 className="text-2xl font-semibold mb-4">Join Our Newsletter</h2>
+              <p className="text-gray-600 mb-6">
+                Subscribe to our newsletter and get 10% off your first purchase
+              </p>
+              <div className="flex gap-4 max-w-md mx-auto">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+                <Button>Subscribe</Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Blogs - Moved to the end, right before the footer */}
+        <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-semibold">Featured Blog Posts</h2>
@@ -174,52 +220,6 @@ const Index = () => {
                 <p>No featured blog posts available.</p>
               </div>
             )}
-          </div>
-        </section>
-
-        {/* Categories Section */}
-        <section className="py-16 bg-white">
-          <div className="container mx-auto px-4">
-            <h2 className="text-2xl font-semibold mb-8">Shop by Category</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {CATEGORIES.map((category) => (
-                <Link
-                  key={category.name}
-                  to="/products"
-                  className="group relative h-64 rounded-lg overflow-hidden"
-                >
-                  <div 
-                    className="absolute inset-0 bg-cover bg-center transform group-hover:scale-105 transition-transform duration-300"
-                    style={{ backgroundImage: `url(${category.image})` }}
-                  />
-                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-colors" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <h3 className="text-white text-2xl font-semibold">{category.name}</h3>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Newsletter Section */}
-        <section className="py-16 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <div className="max-w-2xl mx-auto text-center">
-              <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-gray-700" />
-              <h2 className="text-2xl font-semibold mb-4">Join Our Newsletter</h2>
-              <p className="text-gray-600 mb-6">
-                Subscribe to our newsletter and get 10% off your first purchase
-              </p>
-              <div className="flex gap-4 max-w-md mx-auto">
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-                <Button>Subscribe</Button>
-              </div>
-            </div>
           </div>
         </section>
       </main>
