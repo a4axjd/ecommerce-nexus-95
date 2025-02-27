@@ -4,7 +4,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-apiKey: "AIzaSyDCfCg628NCOQZ3v2sR9DFIwYXEzKtZu_Q",
+  apiKey: "AIzaSyDCfCg628NCOQZ3v2sR9DFIwYXEzKtZu_Q",
   authDomain: "firdousia-c1428.firebaseapp.com",
   projectId: "firdousia-c1428",
   storageBucket: "firdousia-c1428.firebasestorage.app",

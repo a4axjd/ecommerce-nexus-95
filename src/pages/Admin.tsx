@@ -17,6 +17,7 @@ const Admin = () => {
   const { signOut } = useClerk();
   const { data: products, refetch } = useProducts();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -38,13 +39,24 @@ const Admin = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting) {
+      return; // Prevent multiple submissions
+    }
+    
+    setIsSubmitting(true);
+    
     try {
+      console.log("Starting product submission...");
       let imageUrl = selectedProduct?.image || "";
 
       if (formData.image) {
-        const storageRef = ref(storage, `products/${formData.image.name}`);
+        console.log("Uploading image...");
+        const storageRef = ref(storage, `products/${Date.now()}_${formData.image.name}`);
         const uploadResult = await uploadBytes(storageRef, formData.image);
+        console.log("Image uploaded, getting URL...");
         imageUrl = await getDownloadURL(uploadResult.ref);
+        console.log("Image URL:", imageUrl);
       }
 
       const productData = {
@@ -55,11 +67,16 @@ const Admin = () => {
         image: imageUrl,
       };
 
+      console.log("Product data prepared:", productData);
+
       if (selectedProduct) {
+        console.log("Updating existing product...");
         await updateDoc(doc(db, "products", selectedProduct.id), productData);
         toast.success("Product updated successfully");
       } else {
-        await addDoc(collection(db, "products"), productData);
+        console.log("Adding new product...");
+        const docRef = await addDoc(collection(db, "products"), productData);
+        console.log("Product added with ID:", docRef.id);
         toast.success("Product added successfully");
       }
 
@@ -71,10 +88,13 @@ const Admin = () => {
         image: null,
       });
       setSelectedProduct(null);
-      refetch();
+      await refetch();
+      console.log("Form reset and products refetched");
     } catch (error) {
       console.error("Error saving product:", error);
-      toast.error("Error saving product");
+      toast.error("Error saving product: " + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -97,7 +117,7 @@ const Admin = () => {
         refetch();
       } catch (error) {
         console.error("Error deleting product:", error);
-        toast.error("Error deleting product");
+        toast.error("Error deleting product: " + (error instanceof Error ? error.message : String(error)));
       }
     }
   };
@@ -202,8 +222,13 @@ const Admin = () => {
                 </div>
 
                 <div className="flex gap-4">
-                  <Button type="submit">
-                    {selectedProduct ? "Update Product" : "Add Product"}
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting 
+                      ? "Processing..." 
+                      : selectedProduct 
+                        ? "Update Product" 
+                        : "Add Product"
+                    }
                   </Button>
                   {selectedProduct && (
                     <Button
@@ -219,6 +244,7 @@ const Admin = () => {
                           image: null,
                         });
                       }}
+                      disabled={isSubmitting}
                     >
                       Cancel Edit
                     </Button>
@@ -266,6 +292,11 @@ const Admin = () => {
                     </div>
                   </div>
                 ))}
+                {products?.length === 0 && (
+                  <p className="text-center text-muted-foreground py-4">
+                    No products found. Add your first product above.
+                  </p>
+                )}
               </div>
             </div>
           </div>
