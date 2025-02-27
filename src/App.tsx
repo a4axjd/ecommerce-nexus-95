@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
+import { Elements } from '@stripe/react-stripe-js';
+import { stripePromise } from "@/lib/stripe";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -15,7 +17,10 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
+import BlogAdmin from "./pages/BlogAdmin";
 import AdminSignIn from "./pages/AdminSignIn";
+import Blogs from "./pages/Blogs";
+import BlogPost from "./pages/BlogPost";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,46 +41,63 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <CartProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/products/:id" element={<ProductDetail />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/order-confirmation" element={<OrderConfirmation />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route
-                path="/admin"
-                element={
-                  <>
-                    <SignedIn>
-                      <Admin />
-                    </SignedIn>
-                    <SignedOut>
-                      <Navigate to="/admin/sign-in" replace />
-                    </SignedOut>
-                  </>
-                }
-              />
-              <Route
-                path="/admin/sign-in"
-                element={
-                  <>
-                    <SignedOut>
-                      <AdminSignIn />
-                    </SignedOut>
-                    <SignedIn>
-                      <Navigate to="/admin" replace />
-                    </SignedIn>
-                  </>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
+          <Elements stripe={stripePromise}>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/products/:id" element={<ProductDetail />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/order-confirmation" element={<OrderConfirmation />} />
+                <Route path="/blogs" element={<Blogs />} />
+                <Route path="/blogs/:id" element={<BlogPost />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route
+                  path="/admin"
+                  element={
+                    <>
+                      <SignedIn>
+                        <Admin />
+                      </SignedIn>
+                      <SignedOut>
+                        <Navigate to="/admin/sign-in" replace />
+                      </SignedOut>
+                    </>
+                  }
+                />
+                <Route
+                  path="/admin/blogs"
+                  element={
+                    <>
+                      <SignedIn>
+                        <BlogAdmin />
+                      </SignedIn>
+                      <SignedOut>
+                        <Navigate to="/admin/sign-in" replace />
+                      </SignedOut>
+                    </>
+                  }
+                />
+                <Route
+                  path="/admin/sign-in"
+                  element={
+                    <>
+                      <SignedOut>
+                        <AdminSignIn />
+                      </SignedOut>
+                      <SignedIn>
+                        <Navigate to="/admin" replace />
+                      </SignedIn>
+                    </>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </Elements>
         </CartProvider>
       </TooltipProvider>
     </QueryClientProvider>
