@@ -3,6 +3,7 @@ import { useState } from "react";
 import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { CreditCard } from "lucide-react";
 
 interface PaymentFormProps {
   onSuccess: () => void;
