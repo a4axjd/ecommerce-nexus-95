@@ -1,8 +1,7 @@
 
 import { useState } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "@/lib/firebase";
+import { db } from "@/lib/firebase";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -23,18 +22,12 @@ const Admin = () => {
     description: "",
     price: "",
     category: "",
-    image: null as File | null,
+    image: "", // Changed from File to string for image URL
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      setFormData(prev => ({ ...prev, image: e.target.files![0] }));
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,40 +43,14 @@ const Admin = () => {
     
     try {
       console.log("Starting product submission...");
-      let imageUrl = selectedProduct?.image || "";
-
-      // Only upload image if a new one is selected
-      if (formData.image) {
-        console.log("Uploading image...", formData.image);
-        toast.info("Uploading image...");
-        
-        try {
-          // Generate a unique file name
-          const fileName = `${Date.now()}_${formData.image.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-          const storageRef = ref(storage, `products/${fileName}`);
-          
-          // Upload the image
-          const uploadResult = await uploadBytes(storageRef, formData.image);
-          console.log("Image uploaded successfully:", uploadResult);
-          toast.info("Image uploaded, getting URL...");
-          
-          // Get the download URL
-          imageUrl = await getDownloadURL(uploadResult.ref);
-          console.log("Image URL:", imageUrl);
-        } catch (uploadError) {
-          console.error("Error uploading image:", uploadError);
-          toast.error("Error uploading image: " + (uploadError instanceof Error ? uploadError.message : String(uploadError)));
-          setIsSubmitting(false);
-          return; // Exit early if image upload fails
-        }
-      }
-
+      
+      // Prepare the product data with direct image URL
       const productData = {
         title: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),
         category: formData.category,
-        image: imageUrl,
+        image: formData.image,
       };
 
       console.log("Product data prepared:", productData);
@@ -113,7 +80,7 @@ const Admin = () => {
         description: "",
         price: "",
         category: "",
-        image: null,
+        image: "",
       });
       setSelectedProduct(null);
       
@@ -138,7 +105,7 @@ const Admin = () => {
       description: product.description,
       price: product.price.toString(),
       category: product.category,
-      image: null,
+      image: product.image,
     });
   };
 
@@ -241,16 +208,16 @@ const Admin = () => {
 
                 <div>
                   <label htmlFor="image" className="block text-sm font-medium mb-1">
-                    Product Image
+                    Image URL
                   </label>
                   <Input
-                    type="file"
+                    type="url"
                     id="image"
                     name="image"
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    className="cursor-pointer"
-                    required={!selectedProduct}
+                    value={formData.image}
+                    onChange={handleInputChange}
+                    placeholder="https://example.com/image.jpg"
+                    required
                   />
                 </div>
 
@@ -274,7 +241,7 @@ const Admin = () => {
                           description: "",
                           price: "",
                           category: "",
-                          image: null,
+                          image: "",
                         });
                       }}
                       disabled={isSubmitting}
