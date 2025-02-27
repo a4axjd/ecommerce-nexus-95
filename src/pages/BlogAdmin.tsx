@@ -7,12 +7,11 @@ import { Input } from "@/components/ui/input";
 import { useBlogs, useCreateBlog, useUpdateBlog, useDeleteBlog, Blog } from "@/hooks/useBlogs";
 import { Pencil, Trash, LogOut, PlusCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useUser, useClerk } from "@clerk/clerk-react";
+import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const BlogAdmin = () => {
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { currentUser, signOut } = useAuth();
   const navigate = useNavigate();
   const { data: blogs, isLoading } = useBlogs();
   const createBlog = useCreateBlog();
@@ -119,7 +118,7 @@ const BlogAdmin = () => {
                 Manage Products
               </Button>
               <p className="text-sm text-muted-foreground">
-                Signed in as {user?.primaryEmailAddress?.emailAddress}
+                Signed in as {currentUser?.email}
               </p>
               <Button variant="outline" onClick={() => signOut()}>
                 <LogOut className="h-4 w-4 mr-2" />

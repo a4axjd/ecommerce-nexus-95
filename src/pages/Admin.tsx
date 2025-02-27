@@ -9,11 +9,10 @@ import { Input } from "@/components/ui/input";
 import { useProducts, Product } from "@/hooks/useProducts";
 import { Pencil, Trash, LogOut } from "lucide-react";
 import { toast } from "sonner";
-import { useUser, useClerk } from "@clerk/clerk-react";
+import { useAuth } from "@/context/AuthContext";
 
 const Admin = () => {
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { currentUser, signOut } = useAuth();
   const { data: products, refetch } = useProducts();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -132,7 +131,7 @@ const Admin = () => {
             <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
             <div className="flex items-center gap-4">
               <p className="text-sm text-muted-foreground">
-                Signed in as {user?.primaryEmailAddress?.emailAddress}
+                Signed in as {currentUser?.email}
               </p>
               <Button variant="outline" onClick={() => signOut()}>
                 <LogOut className="h-4 w-4 mr-2" />

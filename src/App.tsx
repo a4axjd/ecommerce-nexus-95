@@ -3,11 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
-import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-react";
+import { AuthProvider } from "@/context/AuthContext";
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from "@/lib/stripe";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -30,15 +31,9 @@ const queryClient = new QueryClient({
   },
 });
 
-// Make sure to have this in your .env file
-const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-if (!PUBLISHABLE_KEY) {
-  throw new Error("Missing Clerk Publishable Key");
-}
-
 const App = () => (
-  <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
-    <QueryClientProvider client={queryClient}>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
       <TooltipProvider>
         <CartProvider>
           <Elements stripe={stripePromise}>
@@ -55,44 +50,22 @@ const App = () => (
                 <Route path="/blogs/:id" element={<BlogPost />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
-                <Route
-                  path="/admin"
+                <Route path="/admin/sign-in" element={<AdminSignIn />} />
+                <Route 
+                  path="/admin" 
                   element={
-                    <>
-                      <SignedIn>
-                        <Admin />
-                      </SignedIn>
-                      <SignedOut>
-                        <Navigate to="/admin/sign-in" replace />
-                      </SignedOut>
-                    </>
-                  }
+                    <ProtectedRoute>
+                      <Admin />
+                    </ProtectedRoute>
+                  } 
                 />
-                <Route
-                  path="/admin/blogs"
+                <Route 
+                  path="/admin/blogs" 
                   element={
-                    <>
-                      <SignedIn>
-                        <BlogAdmin />
-                      </SignedIn>
-                      <SignedOut>
-                        <Navigate to="/admin/sign-in" replace />
-                      </SignedOut>
-                    </>
-                  }
-                />
-                <Route
-                  path="/admin/sign-in"
-                  element={
-                    <>
-                      <SignedOut>
-                        <AdminSignIn />
-                      </SignedOut>
-                      <SignedIn>
-                        <Navigate to="/admin" replace />
-                      </SignedIn>
-                    </>
-                  }
+                    <ProtectedRoute>
+                      <BlogAdmin />
+                    </ProtectedRoute>
+                  } 
                 />
                 <Route path="*" element={<NotFound />} />
               </Routes>
@@ -100,8 +73,8 @@ const App = () => (
           </Elements>
         </CartProvider>
       </TooltipProvider>
-    </QueryClientProvider>
-  </ClerkProvider>
+    </AuthProvider>
+  </QueryClientProvider>
 );
 
 export default App;
