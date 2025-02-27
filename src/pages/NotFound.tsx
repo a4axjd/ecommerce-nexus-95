@@ -1,15 +1,24 @@
-import { useLocation } from "react-router-dom";
+
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 
 const NotFound = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.error(
       "404 Error: User attempted to access non-existent route:",
       location.pathname
     );
-  }, [location.pathname]);
+
+    // Check if the path matches a Clerk authentication route pattern
+    if (location.pathname.includes('/admin/sign-in/factor-one') || 
+        location.pathname.includes('/admin/sign-in/verify')) {
+      // Redirect to the main sign-in page
+      navigate('/admin/sign-in', { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">

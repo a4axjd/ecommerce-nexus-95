@@ -10,7 +10,12 @@ const AdminSignIn = () => {
       <main className="flex-grow container mx-auto px-4 pt-24">
         <div className="max-w-md mx-auto">
           <h1 className="text-2xl font-semibold mb-8 text-center">Admin Sign In</h1>
-          <SignIn redirectUrl="/admin" routing="path" path="/admin/sign-in" />
+          <SignIn 
+            redirectUrl="/admin"
+            routing="path"
+            path="/admin/sign-in"
+            signUpUrl="/admin/sign-in"
+          />
         </div>
       </main>
       <Footer />
