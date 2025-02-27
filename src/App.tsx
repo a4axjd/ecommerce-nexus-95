@@ -19,9 +19,13 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import BlogAdmin from "./pages/BlogAdmin";
+import OrdersAdmin from "./pages/OrdersAdmin";
+import AnalyticsAdmin from "./pages/AnalyticsAdmin";
+import CouponsAdmin from "./pages/CouponsAdmin";
 import AdminSignIn from "./pages/AdminSignIn";
 import Blogs from "./pages/Blogs";
 import BlogPost from "./pages/BlogPost";
+import UserAccount from "./pages/UserAccount";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,6 +54,7 @@ const App = () => (
                 <Route path="/blogs/:id" element={<BlogPost />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/account" element={<UserAccount />} />
                 <Route path="/admin/sign-in" element={<AdminSignIn />} />
                 <Route 
                   path="/admin" 
@@ -64,6 +69,30 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <BlogAdmin />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/orders" 
+                  element={
+                    <ProtectedRoute>
+                      <OrdersAdmin />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/analytics" 
+                  element={
+                    <ProtectedRoute>
+                      <AnalyticsAdmin />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/admin/coupons" 
+                  element={
+                    <ProtectedRoute>
+                      <CouponsAdmin />
                     </ProtectedRoute>
                   } 
                 />

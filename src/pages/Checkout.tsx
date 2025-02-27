@@ -7,15 +7,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
-import { CreditCard, LockIcon } from "lucide-react";
+import { CreditCard, LockIcon, Tag } from "lucide-react";
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from "@/lib/stripe";
 import { PaymentForm } from "@/components/PaymentForm";
+import { useValidateCoupon, useIncrementCouponUsage } from "@/hooks/useCoupons";
+import { useCreateOrder } from "@/hooks/useOrders";
+import { useAuth } from "@/context/AuthContext";
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const { state, clearCart } = useCart();
   const [step, setStep] = useState(1);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountAmount: number;
+    couponId: string;
+  } | null>(null);
+
+  const { data: couponValidation, error: couponError, isLoading: validatingCoupon } = 
+    useValidateCoupon(couponCode, state.total);
+  
+  const incrementCouponUsage = useIncrementCouponUsage();
+  const createOrder = useCreateOrder();
+
   const [formData, setFormData] = useState({
     email: "",
     name: "",
@@ -39,10 +56,89 @@ const Checkout = () => {
     toast.success("Shipping information saved");
   };
 
-  const handlePaymentSuccess = () => {
-    navigate("/order-confirmation");
-    clearCart();
-    toast.success("Payment processed successfully");
+  const handlePaymentSuccess = async () => {
+    if (!currentUser) {
+      toast.error("You must be logged in to complete your order");
+      navigate("/admin/sign-in");
+      return;
+    }
+
+    try {
+      // Create the order in Firestore
+      const orderItems = state.items.map(item => ({
+        id: crypto.randomUUID(),
+        productId: item.id,
+        title: item.title,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.image
+      }));
+
+      const orderData = {
+        userId: currentUser.uid,
+        items: orderItems,
+        totalAmount: state.total,
+        status: 'pending' as const,
+        shippingAddress: {
+          name: formData.name,
+          address: formData.address,
+          city: formData.city,
+          postalCode: formData.postalCode,
+          country: formData.country,
+        },
+        paymentMethod: 'credit_card',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      // Add coupon data if a coupon was applied
+      if (appliedCoupon) {
+        Object.assign(orderData, {
+          couponCode: appliedCoupon.code,
+          discountAmount: appliedCoupon.discountAmount
+        });
+
+        // Increment the coupon usage
+        await incrementCouponUsage.mutateAsync(appliedCoupon.couponId);
+      }
+
+      await createOrder.mutateAsync(orderData);
+      
+      // Clear the cart and redirect
+      clearCart();
+      navigate("/order-confirmation");
+      toast.success("Order placed successfully");
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast.error("Failed to create order. Please try again.");
+    }
+  };
+
+  const handleApplyCoupon = () => {
+    if (!couponCode.trim()) {
+      toast.error("Please enter a coupon code");
+      return;
+    }
+
+    if (couponError) {
+      toast.error(couponError instanceof Error ? couponError.message : "Invalid coupon");
+      return;
+    }
+
+    if (couponValidation) {
+      setAppliedCoupon({
+        code: couponCode,
+        discountAmount: couponValidation.discountAmount,
+        couponId: couponValidation.coupon.id
+      });
+      toast.success(`Coupon applied! You saved $${couponValidation.discountAmount.toFixed(2)}`);
+      setCouponCode("");
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    toast.info("Coupon removed");
   };
 
   if (state.items.length === 0) {
@@ -59,6 +155,10 @@ const Checkout = () => {
       </div>
     );
   }
+
+  // Calculate final amount considering any coupon discount
+  const discountAmount = appliedCoupon ? appliedCoupon.discountAmount : 0;
+  const finalAmount = Math.max(0, state.total - discountAmount);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -196,7 +296,7 @@ const Checkout = () => {
                 </div>
                 
                 <Elements stripe={stripePromise}>
-                  <PaymentForm onSuccess={handlePaymentSuccess} amount={state.total} />
+                  <PaymentForm onSuccess={handlePaymentSuccess} amount={finalAmount} />
                 </Elements>
                 
                 <Button 
@@ -226,18 +326,59 @@ const Checkout = () => {
                   </div>
                 ))}
 
+                {/* Coupon Code Input */}
+                {!appliedCoupon && (
+                  <div className="pt-4 border-t">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="text"
+                          placeholder="Coupon code"
+                          className="pl-10"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleApplyCoupon}
+                        disabled={validatingCoupon}
+                      >
+                        {validatingCoupon ? "Checking..." : "Apply"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="border-t pt-4 space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
                     <span>${state.total.toFixed(2)}</span>
                   </div>
+                  {appliedCoupon && (
+                    <div className="flex justify-between text-green-600">
+                      <span className="flex items-center">
+                        Discount
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="ml-2 h-5 text-xs"
+                          onClick={removeCoupon}
+                        >
+                          Remove
+                        </Button>
+                      </span>
+                      <span>-${appliedCoupon.discountAmount.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>Free</span>
                   </div>
                   <div className="flex justify-between font-semibold text-lg mt-2 pt-2 border-t">
                     <span>Total</span>
-                    <span>${state.total.toFixed(2)}</span>
+                    <span>${finalAmount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
