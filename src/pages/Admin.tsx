@@ -41,22 +41,41 @@ const Admin = () => {
     e.preventDefault();
     
     if (isSubmitting) {
+      toast.info("Already processing your request...");
       return; // Prevent multiple submissions
     }
     
     setIsSubmitting(true);
+    toast.info("Starting product submission...");
     
     try {
       console.log("Starting product submission...");
       let imageUrl = selectedProduct?.image || "";
 
+      // Only upload image if a new one is selected
       if (formData.image) {
-        console.log("Uploading image...");
-        const storageRef = ref(storage, `products/${Date.now()}_${formData.image.name}`);
-        const uploadResult = await uploadBytes(storageRef, formData.image);
-        console.log("Image uploaded, getting URL...");
-        imageUrl = await getDownloadURL(uploadResult.ref);
-        console.log("Image URL:", imageUrl);
+        console.log("Uploading image...", formData.image);
+        toast.info("Uploading image...");
+        
+        try {
+          // Generate a unique file name
+          const fileName = `${Date.now()}_${formData.image.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+          const storageRef = ref(storage, `products/${fileName}`);
+          
+          // Upload the image
+          const uploadResult = await uploadBytes(storageRef, formData.image);
+          console.log("Image uploaded successfully:", uploadResult);
+          toast.info("Image uploaded, getting URL...");
+          
+          // Get the download URL
+          imageUrl = await getDownloadURL(uploadResult.ref);
+          console.log("Image URL:", imageUrl);
+        } catch (uploadError) {
+          console.error("Error uploading image:", uploadError);
+          toast.error("Error uploading image: " + (uploadError instanceof Error ? uploadError.message : String(uploadError)));
+          setIsSubmitting(false);
+          return; // Exit early if image upload fails
+        }
       }
 
       const productData = {
@@ -68,18 +87,27 @@ const Admin = () => {
       };
 
       console.log("Product data prepared:", productData);
+      toast.info("Saving product data...");
 
-      if (selectedProduct) {
-        console.log("Updating existing product...");
-        await updateDoc(doc(db, "products", selectedProduct.id), productData);
-        toast.success("Product updated successfully");
-      } else {
-        console.log("Adding new product...");
-        const docRef = await addDoc(collection(db, "products"), productData);
-        console.log("Product added with ID:", docRef.id);
-        toast.success("Product added successfully");
+      try {
+        if (selectedProduct) {
+          console.log("Updating existing product...");
+          await updateDoc(doc(db, "products", selectedProduct.id), productData);
+          toast.success("Product updated successfully");
+        } else {
+          console.log("Adding new product...");
+          const docRef = await addDoc(collection(db, "products"), productData);
+          console.log("Product added with ID:", docRef.id);
+          toast.success("Product added successfully");
+        }
+      } catch (dbError) {
+        console.error("Error saving to database:", dbError);
+        toast.error("Error saving to database: " + (dbError instanceof Error ? dbError.message : String(dbError)));
+        setIsSubmitting(false);
+        return;
       }
 
+      // Reset the form
       setFormData({
         title: "",
         description: "",
@@ -88,10 +116,15 @@ const Admin = () => {
         image: null,
       });
       setSelectedProduct(null);
+      
+      // Refresh the products list
+      console.log("Refreshing products list...");
+      toast.info("Refreshing products list...");
       await refetch();
       console.log("Form reset and products refetched");
+      
     } catch (error) {
-      console.error("Error saving product:", error);
+      console.error("General error in product submission:", error);
       toast.error("Error saving product: " + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsSubmitting(false);
