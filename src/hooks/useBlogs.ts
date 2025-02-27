@@ -38,7 +38,7 @@ export const useFeaturedBlogs = () => {
           id: doc.id,
           ...doc.data(),
         }))
-        .filter(blog => blog.featured === true) as Blog[];
+        .filter((blog: Blog) => blog.featured === true) as Blog[];
     },
   });
 };

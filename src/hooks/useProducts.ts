@@ -36,7 +36,7 @@ export const useFeaturedProducts = () => {
           id: doc.id,
           ...doc.data()
         }))
-        .filter(product => product.featured === true) as Product[];
+        .filter((product: Product) => product.featured === true) as Product[];
     },
   });
 };
