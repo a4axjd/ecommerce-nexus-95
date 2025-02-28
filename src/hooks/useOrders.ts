@@ -25,6 +25,9 @@ export interface Order {
     city: string;
     postalCode: string;
     country: string;
+    email?: string;  // Added email field
+    phone?: string;  // Added phone field
+    state?: string;  // Added state field
   };
   paymentMethod: string;
   createdAt: number;
