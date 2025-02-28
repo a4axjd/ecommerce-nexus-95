@@ -2,19 +2,14 @@
 import { useState } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProducts, Product } from "@/hooks/useProducts";
-import { Pencil, Trash, LogOut, BookText, Star } from "lucide-react";
+import { Pencil, Trash, Star } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { AdminSidebar } from "@/components/AdminSidebar";
 
 const Admin = () => {
-  const { currentUser, signOut } = useAuth();
-  const navigate = useNavigate();
   const { data: products, refetch } = useProducts();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -133,27 +128,12 @@ const Admin = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="flex h-screen">
+      <AdminSidebar />
       
-      <main className="flex-grow container mx-auto px-4 pt-24">
+      <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-2xl font-semibold">Admin Dashboard</h1>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={() => navigate("/admin/blogs")}>
-                <BookText className="h-4 w-4 mr-2" />
-                Manage Blogs
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                Signed in as {currentUser?.email}
-              </p>
-              <Button variant="outline" onClick={() => signOut()}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-          </div>
+          <h1 className="text-2xl font-semibold mb-8">Product Management</h1>
 
           <div className="space-y-8">
             <div className="bg-white p-6 rounded-lg shadow">
@@ -338,8 +318,6 @@ const Admin = () => {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };

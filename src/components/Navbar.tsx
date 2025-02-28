@@ -1,15 +1,17 @@
 
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { ShoppingCart, Menu, X } from "lucide-react";
+import { ShoppingCart, Menu, X, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Cart } from "@/components/Cart";
 import { useCart } from "@/context/CartContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/context/AuthContext";
 
 export const Navbar = () => {
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { currentUser } = useAuth();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { state } = useCart();
@@ -34,6 +36,13 @@ export const Navbar = () => {
         {isMobile ? (
           <>
             <div className="flex items-center gap-4">
+              {currentUser && (
+                <Link to="/account">
+                  <Button variant="ghost" size="icon">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </Link>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -76,6 +85,28 @@ export const Navbar = () => {
                         </Link>
                       </li>
                     ))}
+                    {!currentUser ? (
+                      <>
+                        <li>
+                          <Link
+                            to="/sign-in"
+                            className="block py-2 text-gray-600 hover:text-primary"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            Sign In
+                          </Link>
+                        </li>
+                        <li>
+                          <Link
+                            to="/sign-up"
+                            className="block py-2 text-gray-600 hover:text-primary"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                          >
+                            Sign Up
+                          </Link>
+                        </li>
+                      </>
+                    ) : null}
                   </ul>
                 </nav>
               </div>
@@ -102,19 +133,39 @@ export const Navbar = () => {
               </ul>
             </nav>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative"
-              onClick={() => setIsCartOpen(true)}
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {state.items.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {state.items.length}
-                </span>
+            <div className="flex items-center gap-4">
+              {!currentUser ? (
+                <div className="flex gap-2">
+                  <Link to="/sign-in">
+                    <Button variant="ghost" size="sm">Sign In</Button>
+                  </Link>
+                  <Link to="/sign-up">
+                    <Button size="sm">Sign Up</Button>
+                  </Link>
+                </div>
+              ) : (
+                <Link to="/account">
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    My Account
+                  </Button>
+                </Link>
               )}
-            </Button>
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => setIsCartOpen(true)}
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {state.items.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {state.items.length}
+                  </span>
+                )}
+              </Button>
+            </div>
           </>
         )}
       </div>

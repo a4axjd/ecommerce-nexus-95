@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, isAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -20,6 +20,10 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   if (!currentUser) {
     return <Navigate to="/admin/sign-in" replace />;
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/account" replace />;
   }
 
   return <>{children}</>;

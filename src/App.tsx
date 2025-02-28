@@ -23,6 +23,8 @@ import OrdersAdmin from "./pages/OrdersAdmin";
 import AnalyticsAdmin from "./pages/AnalyticsAdmin";
 import CouponsAdmin from "./pages/CouponsAdmin";
 import AdminSignIn from "./pages/AdminSignIn";
+import SignIn from "./pages/SignIn";
+import SignUp from "./pages/SignUp";
 import Blogs from "./pages/Blogs";
 import BlogPost from "./pages/BlogPost";
 import UserAccount from "./pages/UserAccount";
@@ -55,6 +57,8 @@ const App = () => (
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
                 <Route path="/account" element={<UserAccount />} />
+                <Route path="/sign-in" element={<SignIn />} />
+                <Route path="/sign-up" element={<SignUp />} />
                 <Route path="/admin/sign-in" element={<AdminSignIn />} />
                 <Route 
                   path="/admin" 

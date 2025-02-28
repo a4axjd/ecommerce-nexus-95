@@ -1,13 +1,14 @@
 
 import { useQuery } from "@tanstack/react-query";
-import { collection, getDocs, query, where, orderBy, Timestamp } from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { Order } from "./useOrders";
 
 export interface AnalyticsData {
   totalRevenue: number;
   totalOrders: number;
   averageOrderValue: number;
-  recentOrders: any[];
+  recentOrders: Order[];
   salesByDate: {
     date: string;
     revenue: number;
@@ -49,7 +50,7 @@ export const useAnalytics = (period: 'week' | 'month' | 'year' = 'month') => {
       const orders = ordersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as Order[];
       
       // Calculate total revenue and total orders
       let totalRevenue = 0;
@@ -68,7 +69,7 @@ export const useAnalytics = (period: 'week' | 'month' | 'year' = 'month') => {
         totalRevenue += order.totalAmount;
         
         // Process order items for product stats
-        order.items.forEach((item: any) => {
+        order.items.forEach((item) => {
           if (!productMap[item.productId]) {
             productMap[item.productId] = {
               id: item.productId,
