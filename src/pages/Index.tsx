@@ -7,6 +7,44 @@ import { ArrowRight, ShoppingBag, Truck, Clock, Shield, BookOpen } from "lucide-
 import { Link } from "react-router-dom";
 import { useFeaturedProducts } from "@/hooks/useProducts";
 import { useFeaturedBlogs } from "@/hooks/useBlogs";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+
+const HERO_SLIDES = [
+  {
+    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&auto=format&fit=crop&q=60",
+    title: "Discover Our Collection",
+    subtitle: "Curated pieces for the modern lifestyle",
+    buttonText: "Shop Now",
+    buttonLink: "/products",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=1600&auto=format&fit=crop&q=60",
+    title: "Summer Sale",
+    subtitle: "Up to 50% off on selected items",
+    buttonText: "View Offers",
+    buttonLink: "/products",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=1600&auto=format&fit=crop&q=60",
+    title: "New Arrivals",
+    subtitle: "Explore our latest styles",
+    buttonText: "Shop New",
+    buttonLink: "/products",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1600&auto=format&fit=crop&q=60",
+    title: "Exclusive Collection",
+    subtitle: "Limited edition items just for you",
+    buttonText: "Explore Now",
+    buttonLink: "/products",
+  },
+];
 
 const CATEGORIES = [
   {
@@ -32,31 +70,41 @@ const Index = () => {
       <Navbar />
       
       <main className="flex-grow">
-        {/* Hero Section */}
-        <section className="relative h-[80vh] flex items-center justify-center bg-gray-50">
-          <div 
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: "url('https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&auto=format&fit=crop&q=60')",
-            }}
-          >
-            <div className="absolute inset-0 bg-black/40" />
-          </div>
-          
-          <div className="container mx-auto px-4 text-center relative z-10">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white animate-fade-in">
-              Discover Our Collection
-            </h1>
-            <p className="text-lg md:text-xl text-gray-100 mb-8 animate-fade-in">
-              Curated pieces for the modern lifestyle
-            </p>
-            <Link to="/products">
-              <Button size="lg" className="animate-slide-in group">
-                Shop Now
-                <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-          </div>
+        {/* Hero Section with Carousel */}
+        <section className="relative h-[80vh]">
+          <Carousel className="w-full h-full">
+            <CarouselContent className="h-full">
+              {HERO_SLIDES.map((slide, index) => (
+                <CarouselItem key={index} className="h-full">
+                  <div className="relative h-full w-full flex items-center justify-center">
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ backgroundImage: `url(${slide.image})` }}
+                    >
+                      <div className="absolute inset-0 bg-black/40" />
+                    </div>
+                    
+                    <div className="container mx-auto px-4 text-center relative z-10">
+                      <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white animate-fade-in">
+                        {slide.title}
+                      </h1>
+                      <p className="text-lg md:text-xl text-gray-100 mb-8 animate-fade-in">
+                        {slide.subtitle}
+                      </p>
+                      <Link to={slide.buttonLink}>
+                        <Button size="lg" className="animate-slide-in group">
+                          {slide.buttonText}
+                          <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="left-4 lg:left-8" />
+            <CarouselNext className="right-4 lg:right-8" />
+          </Carousel>
         </section>
 
         {/* Features Section */}
@@ -164,7 +212,7 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Featured Blogs - Moved to the end, right before the footer */}
+        {/* Featured Blogs */}
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-8">
@@ -201,7 +249,7 @@ const Index = () => {
                         By {blog.author} | {new Date(blog.createdAt).toLocaleDateString()}
                       </p>
                       <div className="flex gap-2 mb-3">
-                        {blog.tags.slice(0, 3).map((tag, i) => (
+                        {blog.tags?.slice(0, 3).map((tag, i) => (
                           <span key={i} className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">
                             {tag}
                           </span>

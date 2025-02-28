@@ -8,6 +8,8 @@ import { useBlogs, Blog } from "@/hooks/useBlogs";
 import { Pencil, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const BlogAdmin = () => {
   const { data: blogs, isLoading, refetch } = useBlogs();
@@ -16,13 +18,25 @@ const BlogAdmin = () => {
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    image: "",
+    imageUrl: "",
     author: "",
+    featured: false,
+    tags: [] as string[]
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const tagsString = e.target.value;
+    const tagsArray = tagsString.split(',').map(tag => tag.trim()).filter(Boolean);
+    setFormData(prev => ({ ...prev, tags: tagsArray }));
+  };
+
+  const handleFeaturedChange = (checked: boolean) => {
+    setFormData(prev => ({ ...prev, featured: checked }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,8 +47,10 @@ const BlogAdmin = () => {
       const blogData = {
         title: formData.title,
         content: formData.content,
-        image: formData.image,
+        imageUrl: formData.imageUrl,
         author: formData.author,
+        featured: formData.featured,
+        tags: formData.tags,
         createdAt: selectedBlog ? selectedBlog.createdAt : Date.now(),
       };
 
@@ -50,8 +66,10 @@ const BlogAdmin = () => {
       setFormData({
         title: "",
         content: "",
-        image: "",
+        imageUrl: "",
         author: "",
+        featured: false,
+        tags: []
       });
       setSelectedBlog(null);
       
@@ -70,8 +88,10 @@ const BlogAdmin = () => {
     setFormData({
       title: blog.title,
       content: blog.content,
-      image: blog.image,
+      imageUrl: blog.imageUrl,
       author: blog.author,
+      featured: blog.featured || false,
+      tags: blog.tags || []
     });
   };
 
@@ -132,14 +152,14 @@ const BlogAdmin = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="image" className="block text-sm font-medium mb-1">
+                  <label htmlFor="imageUrl" className="block text-sm font-medium mb-1">
                     Image URL
                   </label>
                   <Input
                     type="url"
-                    id="image"
-                    name="image"
-                    value={formData.image}
+                    id="imageUrl"
+                    name="imageUrl"
+                    value={formData.imageUrl}
                     onChange={handleInputChange}
                     placeholder="https://example.com/image.jpg"
                     required
@@ -160,6 +180,29 @@ const BlogAdmin = () => {
                   />
                 </div>
 
+                <div>
+                  <label htmlFor="tags" className="block text-sm font-medium mb-1">
+                    Tags (comma separated)
+                  </label>
+                  <Input
+                    type="text"
+                    id="tags"
+                    name="tags"
+                    value={formData.tags.join(', ')}
+                    onChange={handleTagsChange}
+                    placeholder="fashion, lifestyle, trends"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="featured"
+                    checked={formData.featured}
+                    onCheckedChange={handleFeaturedChange}
+                  />
+                  <Label htmlFor="featured">Feature this post on homepage</Label>
+                </div>
+
                 <div className="flex gap-4">
                   <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting 
@@ -178,8 +221,10 @@ const BlogAdmin = () => {
                         setFormData({
                           title: "",
                           content: "",
-                          image: "",
+                          imageUrl: "",
                           author: "",
+                          featured: false,
+                          tags: []
                         });
                       }}
                       disabled={isSubmitting}
@@ -210,15 +255,29 @@ const BlogAdmin = () => {
                     >
                       <div className="flex items-start gap-4">
                         <img
-                          src={blog.image}
+                          src={blog.imageUrl}
                           alt={blog.title}
                           className="w-20 h-20 object-cover rounded"
                         />
                         <div>
-                          <h3 className="font-medium">{blog.title}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium">{blog.title}</h3>
+                            {blog.featured && (
+                              <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                                Featured
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             By {blog.author} • {new Date(blog.createdAt).toLocaleDateString()}
                           </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {blog.tags?.map((tag, i) => (
+                              <span key={i} className="bg-gray-100 text-xs px-1.5 py-0.5 rounded">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
                           <p className="mt-1 text-sm line-clamp-2">
                             {blog.content}
                           </p>
