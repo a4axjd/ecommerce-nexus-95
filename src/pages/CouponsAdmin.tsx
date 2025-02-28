@@ -1,7 +1,5 @@
 
 import { useState } from "react";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -29,15 +27,12 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useCoupons, Coupon, useCreateCoupon, useUpdateCoupon, useDeleteCoupon } from "@/hooks/useCoupons";
-import { LogOut, ShoppingBag, Package, BarChart2, Plus, Pencil, Trash } from "lucide-react";
+import { Plus, Pencil, Trash } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { AdminSidebar } from "@/components/AdminSidebar";
 
 const CouponsAdmin = () => {
-  const { currentUser, signOut } = useAuth();
-  const navigate = useNavigate();
   const { data: coupons = [], isLoading } = useCoupons();
   const createCoupon = useCreateCoupon();
   const updateCoupon = useUpdateCoupon();
@@ -159,35 +154,12 @@ const CouponsAdmin = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="flex h-screen">
+      <AdminSidebar />
       
-      <main className="flex-grow container mx-auto px-4 pt-24">
+      <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-2xl font-semibold">Coupon Management</h1>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={() => navigate("/admin")}>
-                <ShoppingBag className="h-4 w-4 mr-2" />
-                Products
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/admin/orders")}>
-                <Package className="h-4 w-4 mr-2" />
-                Orders
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/admin/analytics")}>
-                <BarChart2 className="h-4 w-4 mr-2" />
-                Analytics
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                Signed in as {currentUser?.email}
-              </p>
-              <Button variant="outline" onClick={() => signOut()}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-          </div>
+          <h1 className="text-2xl font-semibold mb-8">Coupon Management</h1>
 
           <div className="space-y-6">
             <div className="flex justify-end">
@@ -285,8 +257,6 @@ const CouponsAdmin = () => {
           </div>
         </div>
       </main>
-
-      <Footer />
 
       {/* Coupon Form Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

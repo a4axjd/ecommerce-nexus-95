@@ -1,7 +1,5 @@
 
 import { useState } from "react";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -26,15 +24,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useOrders, Order, useUpdateOrderStatus } from "@/hooks/useOrders";
-import { LogOut, ShoppingBag, BarChart2, Search, Tag } from "lucide-react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
-import { useAuth } from "@/context/AuthContext";
-import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { AdminSidebar } from "@/components/AdminSidebar";
 
 const OrdersAdmin = () => {
-  const { currentUser, signOut } = useAuth();
-  const navigate = useNavigate();
   const { data: orders = [], isLoading } = useOrders();
   const updateOrderStatus = useUpdateOrderStatus();
   const [searchQuery, setSearchQuery] = useState("");
@@ -87,35 +82,12 @@ const OrdersAdmin = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+    <div className="flex h-screen">
+      <AdminSidebar />
       
-      <main className="flex-grow container mx-auto px-4 pt-24">
+      <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-2xl font-semibold">Order Management</h1>
-            <div className="flex items-center gap-4">
-              <Button variant="outline" onClick={() => navigate("/admin")}>
-                <ShoppingBag className="h-4 w-4 mr-2" />
-                Products
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/admin/analytics")}>
-                <BarChart2 className="h-4 w-4 mr-2" />
-                Analytics
-              </Button>
-              <Button variant="outline" onClick={() => navigate("/admin/coupons")}>
-                <Tag className="h-4 w-4 mr-2" />
-                Coupons
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                Signed in as {currentUser?.email}
-              </p>
-              <Button variant="outline" onClick={() => signOut()}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-          </div>
+          <h1 className="text-2xl font-semibold mb-8">Order Management</h1>
 
           <div className="space-y-6">
             {/* Filters and Search */}
@@ -218,8 +190,6 @@ const OrdersAdmin = () => {
           </div>
         </div>
       </main>
-
-      <Footer />
 
       {/* Order Details Dialog */}
       <Dialog open={orderDetailsOpen} onOpenChange={setOrderDetailsOpen}>
