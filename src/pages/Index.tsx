@@ -7,44 +7,6 @@ import { ArrowRight, ShoppingBag, Truck, Clock, Shield, BookOpen } from "lucide-
 import { Link } from "react-router-dom";
 import { useFeaturedProducts } from "@/hooks/useProducts";
 import { useFeaturedBlogs } from "@/hooks/useBlogs";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
-
-const HERO_SLIDES = [
-  {
-    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&auto=format&fit=crop&q=60",
-    title: "Discover Our Collection",
-    subtitle: "Curated pieces for the modern lifestyle",
-    buttonText: "Shop Now",
-    buttonLink: "/products",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?w=1600&auto=format&fit=crop&q=60",
-    title: "Summer Sale",
-    subtitle: "Up to 50% off on selected items",
-    buttonText: "View Offers",
-    buttonLink: "/products",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=1600&auto=format&fit=crop&q=60",
-    title: "New Arrivals",
-    subtitle: "Explore our latest styles",
-    buttonText: "Shop New",
-    buttonLink: "/products",
-  },
-  {
-    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=1600&auto=format&fit=crop&q=60",
-    title: "Exclusive Collection",
-    subtitle: "Limited edition items just for you",
-    buttonText: "Explore Now",
-    buttonLink: "/products",
-  },
-];
 
 const CATEGORIES = [
   {
@@ -70,41 +32,31 @@ const Index = () => {
       <Navbar />
       
       <main className="flex-grow">
-        {/* Hero Section with Carousel */}
+        {/* Hero Section */}
         <section className="relative h-screen max-h-[900px] min-h-[600px]">
-          <Carousel className="w-full h-full">
-            <CarouselContent className="h-full">
-              {HERO_SLIDES.map((slide, index) => (
-                <CarouselItem key={index} className="h-full">
-                  <div className="relative h-full w-full flex items-center justify-center">
-                    <div 
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url(${slide.image})` }}
-                    >
-                      <div className="absolute inset-0 bg-black/30" />
-                    </div>
-                    
-                    <div className="container mx-auto px-4 text-center relative z-10">
-                      <h1 className="text-5xl md:text-7xl font-bold mb-8 text-white animate-fade-in">
-                        {slide.title}
-                      </h1>
-                      <p className="text-xl md:text-2xl text-gray-100 mb-10 max-w-3xl mx-auto animate-fade-in">
-                        {slide.subtitle}
-                      </p>
-                      <Link to={slide.buttonLink}>
-                        <Button size="lg" className="animate-slide-in text-lg px-8 py-6 h-auto font-semibold group">
-                          {slide.buttonText}
-                          <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="left-6 lg:left-10 h-12 w-12" />
-            <CarouselNext className="right-6 lg:right-10 h-12 w-12" />
-          </Carousel>
+          <div className="relative h-full w-full flex items-center justify-center">
+            <div 
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: "url(https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&auto=format&fit=crop&q=60)" }}
+            >
+              <div className="absolute inset-0 bg-black/30" />
+            </div>
+            
+            <div className="container mx-auto px-4 text-center relative z-10">
+              <h1 className="text-5xl md:text-7xl font-bold mb-8 text-white animate-fade-in">
+                Discover Our Collection
+              </h1>
+              <p className="text-xl md:text-2xl text-gray-100 mb-10 max-w-3xl mx-auto animate-fade-in">
+                Curated pieces for the modern lifestyle
+              </p>
+              <Link to="/products">
+                <Button size="lg" className="animate-slide-in text-lg px-8 py-6 h-auto font-semibold group">
+                  Shop Now
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            </div>
+          </div>
         </section>
 
         {/* Features Section */}
