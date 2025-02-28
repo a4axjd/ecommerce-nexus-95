@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
-import { CreditCard, LockIcon, Tag } from "lucide-react";
-import { Elements } from '@stripe/react-stripe-js';
-import { stripePromise } from "@/lib/stripe";
+import { LockIcon, Tag } from "lucide-react";
 import { PaymentForm } from "@/components/PaymentForm";
 import { useValidateCoupon, useIncrementCouponUsage } from "@/hooks/useCoupons";
 import { useCreateOrder } from "@/hooks/useOrders";
@@ -295,9 +293,7 @@ const Checkout = () => {
                   </p>
                 </div>
                 
-                <Elements stripe={stripePromise}>
-                  <PaymentForm onSuccess={handlePaymentSuccess} amount={finalAmount} />
-                </Elements>
+                <PaymentForm onSuccess={handlePaymentSuccess} amount={finalAmount} />
                 
                 <Button 
                   variant="outline" 

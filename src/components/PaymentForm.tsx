@@ -1,11 +1,11 @@
 
 import { useState } from "react";
-import { CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { CreditCard, CreditCardIcon } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 
 interface PaymentFormProps {
   onSuccess: () => void;
@@ -13,72 +13,43 @@ interface PaymentFormProps {
 }
 
 export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
-  const stripe = useStripe();
-  const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
+  
+  // For manual card input form
+  const [cardInfo, setCardInfo] = useState({
+    number: "",
+    expiry: "",
+    cvc: "",
+    name: ""
+  });
 
-  const handleStripeSubmit = async (event: React.FormEvent) => {
+  const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setCardInfo(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleCardSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    if (!stripe || !elements) {
+    
+    // Validate inputs (simple validation for demo)
+    if (!cardInfo.number || !cardInfo.expiry || !cardInfo.cvc || !cardInfo.name) {
+      toast.error("Please fill in all card details");
       return;
     }
-
+    
     setIsLoading(true);
     toast.info("Processing payment...");
-
-    // For demonstration purposes, we're just simulating payment success
-    // In a real app, you would create a payment intent on your backend
-    // and confirm it here
     
+    // Simulate processing (in a real app this would be handled by PayPal's SDK)
     setTimeout(() => {
       toast.success("Payment successful");
       setIsLoading(false);
       onSuccess();
     }, 2000);
-
-    // Real implementation would look like this:
-    /*
-    try {
-      const { error, paymentMethod } = await stripe.createPaymentMethod({
-        type: 'card',
-        card: elements.getElement(CardElement)!,
-      });
-
-      if (error) {
-        toast.error(error.message);
-        setIsLoading(false);
-        return;
-      }
-
-      // Send paymentMethod.id to your server
-      const response = await fetch('/api/process-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          payment_method_id: paymentMethod.id,
-          amount: amount * 100, // in cents
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        toast.success("Payment successful");
-        onSuccess();
-      } else {
-        toast.error(data.error);
-      }
-    } catch (err) {
-      toast.error("An error occurred processing your payment");
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-    */
   };
 
   const handlePayPalApprove = (data: any, actions: any) => {
@@ -112,39 +83,78 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
       </TabsList>
 
       <TabsContent value="card" className="space-y-6">
-        <form onSubmit={handleStripeSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="card-element" className="block text-sm font-medium">
-              Card Details
-            </label>
-            <div className="p-3 border rounded-md bg-white">
-              <CardElement
-                id="card-element"
-                options={{
-                  style: {
-                    base: {
-                      fontSize: '16px',
-                      color: '#424770',
-                      '::placeholder': {
-                        color: '#aab7c4',
-                      },
-                    },
-                    invalid: {
-                      color: '#9e2146',
-                    },
-                  },
-                }}
+        <form onSubmit={handleCardSubmit} className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="card-name" className="block text-sm font-medium mb-1">
+                Cardholder Name
+              </label>
+              <Input
+                id="card-name"
+                name="name"
+                placeholder="John Smith"
+                value={cardInfo.name}
+                onChange={handleCardInputChange}
+                required
               />
             </div>
+            
+            <div>
+              <label htmlFor="card-number" className="block text-sm font-medium mb-1">
+                Card Number
+              </label>
+              <Input
+                id="card-number"
+                name="number"
+                placeholder="4111 1111 1111 1111"
+                maxLength={19}
+                value={cardInfo.number}
+                onChange={handleCardInputChange}
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="card-expiry" className="block text-sm font-medium mb-1">
+                  Expiry Date
+                </label>
+                <Input
+                  id="card-expiry"
+                  name="expiry"
+                  placeholder="MM/YY"
+                  maxLength={5}
+                  value={cardInfo.expiry}
+                  onChange={handleCardInputChange}
+                  required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="card-cvc" className="block text-sm font-medium mb-1">
+                  CVC
+                </label>
+                <Input
+                  id="card-cvc"
+                  name="cvc"
+                  placeholder="123"
+                  maxLength={4}
+                  value={cardInfo.cvc}
+                  onChange={handleCardInputChange}
+                  required
+                />
+              </div>
+            </div>
+            
             <p className="text-xs text-muted-foreground mt-1">
-              Test card: 4242 4242 4242 4242 | Exp: Any future date | CVC: Any 3 digits
+              This is a demo form. No real payments will be processed.
             </p>
           </div>
 
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={!stripe || isLoading}
+            disabled={isLoading}
           >
             <CreditCard className="w-4 h-4 mr-2" />
             {isLoading ? "Processing..." : `Pay $${amount.toFixed(2)}`}
@@ -154,7 +164,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
 
       <TabsContent value="paypal">
         <PayPalScriptProvider options={{ 
-          "client-id": "test", // Replace with your PayPal client ID in production
+          clientId: "test", // Replace with your PayPal client ID in production
           currency: "USD",
           intent: "capture"
         }}>
@@ -162,6 +172,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
             style={{ layout: "vertical", shape: "rect" }}
             createOrder={(data, actions) => {
               return actions.order.create({
+                intent: "CAPTURE",
                 purchase_units: [
                   {
                     amount: {

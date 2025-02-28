@@ -1,9 +1,10 @@
 
 import { Fragment } from "react";
-import { Minus, Plus, X } from "lucide-react";
+import { Minus, Plus, X, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
+import { useNavigate } from "react-router-dom";
 
 interface CartProps {
   isOpen: boolean;
@@ -12,21 +13,38 @@ interface CartProps {
 
 export const Cart = ({ isOpen, onClose }: CartProps) => {
   const { state, removeFromCart, updateQuantity } = useCart();
+  const navigate = useNavigate();
+
+  const handleCheckout = () => {
+    onClose();
+    navigate("/checkout");
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent>
+      <SheetContent className="flex flex-col">
         <SheetHeader>
           <SheetTitle>Shopping Cart</SheetTitle>
         </SheetHeader>
 
         {state.items.length === 0 ? (
-          <div className="py-4">
+          <div className="py-4 flex-grow flex flex-col items-center justify-center">
+            <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
             <p className="text-center text-muted-foreground">Your cart is empty</p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={() => {
+                onClose();
+                navigate("/products");
+              }}
+            >
+              Browse Products
+            </Button>
           </div>
         ) : (
           <Fragment>
-            <div className="flex flex-col gap-4 py-4">
+            <div className="flex flex-col gap-4 py-4 flex-grow overflow-auto">
               {state.items.map((item) => (
                 <div key={item.id} className="flex gap-4">
                   {/* Product Image */}
@@ -82,14 +100,19 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
               ))}
             </div>
 
-            <div className="mt-4 border-t pt-4">
-              <div className="flex justify-between">
-                <span className="text-base font-medium">Total</span>
-                <span className="text-base font-medium">
-                  ${state.total.toFixed(2)}
-                </span>
+            <SheetFooter className="mt-auto border-t pt-4">
+              <div className="w-full space-y-4">
+                <div className="flex justify-between">
+                  <span className="text-base font-medium">Total</span>
+                  <span className="text-base font-medium">
+                    ${state.total.toFixed(2)}
+                  </span>
+                </div>
+                <Button className="w-full" onClick={handleCheckout}>
+                  Proceed to Checkout
+                </Button>
               </div>
-            </div>
+            </SheetFooter>
           </Fragment>
         )}
       </SheetContent>
