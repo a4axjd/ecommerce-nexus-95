@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,20 @@ const AdminSignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAttemptedSignIn, setHasAttemptedSignIn] = useState(false);
+
+  useEffect(() => {
+    // This effect runs when isAdmin or currentUser changes after sign-in attempt
+    if (hasAttemptedSignIn && currentUser && !loading) {
+      if (!isAdmin) {
+        toast.error("You don't have admin privileges");
+        navigate("/account");
+      } else {
+        navigate("/admin");
+      }
+      setHasAttemptedSignIn(false);
+    }
+  }, [isAdmin, currentUser, loading, hasAttemptedSignIn, navigate]);
 
   if (loading) {
     return (
@@ -34,20 +48,12 @@ const AdminSignIn = () => {
     
     try {
       await signIn(email, password);
-      
-      // After signing in, the AuthContext will update and check if the user is an admin
-      // If not an admin, we'll show a toast and redirect to account page
-      setTimeout(() => {
-        if (!isAdmin) {
-          toast.error("You don't have admin privileges");
-          navigate("/account");
-        }
-      }, 1000);
+      setHasAttemptedSignIn(true);
+      // Let the useEffect handle the navigation logic after auth state updates
     } catch (error) {
       console.error("Sign in error:", error);
-      // Error is already handled in the signIn function
-    } finally {
       setIsSubmitting(false);
+      // Error is already handled in the signIn function
     }
   };
 

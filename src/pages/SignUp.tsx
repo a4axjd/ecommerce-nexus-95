@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,20 @@ import { LogIn, UserPlus } from "lucide-react";
 
 const SignUp = () => {
   const navigate = useNavigate();
-  const { signUp } = useAuth();
+  const { signUp, currentUser, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [hasAttemptedSignUp, setHasAttemptedSignUp] = useState(false);
+
+  useEffect(() => {
+    // This effect runs when auth state changes after sign-up attempt
+    if (hasAttemptedSignUp && currentUser && !loading) {
+      navigate("/account");
+      setHasAttemptedSignUp(false);
+    }
+  }, [currentUser, loading, hasAttemptedSignUp, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,12 +43,12 @@ const SignUp = () => {
     
     try {
       await signUp(email, password);
-      navigate("/account");
+      setHasAttemptedSignUp(true);
+      // Let the useEffect handle the navigation logic after auth state updates
     } catch (error) {
       console.error("Sign up error:", error);
-      // Error is already handled in the signUp function
-    } finally {
       setIsLoading(false);
+      // Error is already handled in the signUp function
     }
   };
 

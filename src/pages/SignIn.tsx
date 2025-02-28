@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,17 +7,43 @@ import { useAuth } from "@/context/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { LogIn, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 const SignIn = () => {
   const navigate = useNavigate();
-  const { signIn, currentUser } = useAuth();
+  const { signIn, currentUser, isAdmin, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [hasAttemptedSignIn, setHasAttemptedSignIn] = useState(false);
 
-  if (currentUser) {
-    navigate("/account");
-    return null;
+  useEffect(() => {
+    // This effect runs when auth state changes after sign-in attempt
+    if (hasAttemptedSignIn && currentUser && !loading) {
+      if (isAdmin) {
+        toast.info("You are signed in as an admin");
+        navigate("/admin");
+      } else {
+        navigate("/account");
+      }
+      setHasAttemptedSignIn(false);
+    }
+  }, [currentUser, isAdmin, loading, hasAttemptedSignIn, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (currentUser && !loading) {
+    if (isAdmin) {
+      return navigate("/admin");
+    } else {
+      return navigate("/account");
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -26,12 +52,12 @@ const SignIn = () => {
     
     try {
       await signIn(email, password);
-      navigate("/account");
+      setHasAttemptedSignIn(true);
+      // Let the useEffect handle the navigation logic after auth state updates
     } catch (error) {
       console.error("Sign in error:", error);
-      // Error is already handled in the signIn function
-    } finally {
       setIsLoading(false);
+      // Error is already handled in the signIn function
     }
   };
 
