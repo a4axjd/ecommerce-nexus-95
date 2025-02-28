@@ -6,16 +6,28 @@ import { CreditCard } from "lucide-react";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface PaymentFormProps {
   onSuccess: () => void;
   amount: number;
+  shippingInfo?: {
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+    phone: string;
+    email: string;
+  };
 }
 
-export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
+export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
   
   // For manual card input form
   const [cardInfo, setCardInfo] = useState({
@@ -66,8 +78,8 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
     event.preventDefault();
     
     // Prevent duplicate submissions
-    if (formSubmitted || isLoading) {
-      console.log("Preventing duplicate submission - form already submitted");
+    if (formSubmitted || isLoading || orderComplete) {
+      console.log("Preventing duplicate submission - form already submitted or order completed");
       return;
     }
     
@@ -86,6 +98,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
       setTimeout(() => {
         toast.success("Payment successful");
         setIsLoading(false);
+        setOrderComplete(true);
         onSuccess();
       }, 2000);
     } catch (error) {
@@ -98,8 +111,8 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
 
   const handlePayPalApprove = (data: any, actions: any) => {
     // Prevent duplicate submissions
-    if (formSubmitted) {
-      console.log("Preventing duplicate PayPal submission - already processed");
+    if (formSubmitted || orderComplete) {
+      console.log("Preventing duplicate PayPal submission - already processed or order completed");
       return Promise.resolve();
     }
     
@@ -112,6 +125,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
       // For demo, we're just simulating a successful payment
       setTimeout(() => {
         toast.success("PayPal payment successful");
+        setOrderComplete(true);
         onSuccess();
       }, 1500);
     } catch (error) {
@@ -128,14 +142,33 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
     setFormSubmitted(false);
   }, [paymentMethod]);
 
+  // Display information about shipped to address when using PayPal
+  const renderShippingInfo = () => {
+    if (!shippingInfo) return null;
+    
+    return (
+      <div className="mb-4 p-3 bg-muted rounded-md">
+        <div className="text-sm font-medium mb-2">Shipping Information:</div>
+        <div className="text-xs text-muted-foreground">
+          <p><span className="font-medium">Name:</span> {shippingInfo.name}</p>
+          <p><span className="font-medium">Address:</span> {shippingInfo.address}</p>
+          <p><span className="font-medium">City:</span> {shippingInfo.city}, {shippingInfo.state} {shippingInfo.zipCode}</p>
+          <p><span className="font-medium">Country:</span> {shippingInfo.country}</p>
+          <p><span className="font-medium">Email:</span> {shippingInfo.email}</p>
+          <p><span className="font-medium">Phone:</span> {shippingInfo.phone}</p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Tabs defaultValue="card" onValueChange={(value) => setPaymentMethod(value as "card" | "paypal")}>
       <TabsList className="grid w-full grid-cols-2 mb-6">
-        <TabsTrigger value="card" className="flex items-center gap-2">
+        <TabsTrigger value="card" className="flex items-center gap-2" disabled={orderComplete}>
           <CreditCard className="h-4 w-4" />
           Credit Card
         </TabsTrigger>
-        <TabsTrigger value="paypal" className="flex items-center gap-2">
+        <TabsTrigger value="paypal" className="flex items-center gap-2" disabled={orderComplete}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5" fill="#00457C">
             <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.473 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.58 2.975-2.477 6.17-8.233 6.17h-2.19c-.144 0-.263.106-.263.244l-1.12 7.106c-.022.139.085.254.227.254h4.607a.87.87 0 0 0 .863-.647l.033-.165.72-4.574.045-.234a.87.87 0 0 1 .863-.648h.545c3.521 0 6.28-1.43 7.089-5.568.342-1.729.182-3.18-.538-4.195l-.002-.003z" />
             <path d="M20.486 8.124c-.009-.053-.02-.106-.03-.157-.376-1.919-2.3-2.601-4.5-2.601H9.946c-.133 0-.248.074-.282.188L7.158 18.648c-.016.053.009.106.04.149.031.042.08.065.133.065h3.446l.87-5.514-.027.176c.033-.114.145-.195.28-.195h1.827c3.151 0 5.622-1.28 6.343-4.987.021-.106.036-.21.05-.313.211-1.359.011-2.283-.634-3.105l-.02-.018c.024.007.046.018.07.025z" fill="#00457C" />
@@ -148,9 +181,9 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
         <form onSubmit={handleCardSubmit} className="space-y-6">
           <div className="space-y-4">
             <div>
-              <label htmlFor="card-name" className="block text-sm font-medium mb-1">
+              <Label htmlFor="card-name" className="block text-sm font-medium mb-1">
                 Cardholder Name
-              </label>
+              </Label>
               <Input
                 id="card-name"
                 name="name"
@@ -158,14 +191,14 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                 value={cardInfo.name}
                 onChange={handleCardInputChange}
                 required
-                disabled={formSubmitted || isLoading}
+                disabled={formSubmitted || isLoading || orderComplete}
               />
             </div>
             
             <div>
-              <label htmlFor="card-number" className="block text-sm font-medium mb-1">
+              <Label htmlFor="card-number" className="block text-sm font-medium mb-1">
                 Card Number
-              </label>
+              </Label>
               <Input
                 id="card-number"
                 name="number"
@@ -173,15 +206,15 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                 value={cardInfo.number}
                 onChange={handleCardInputChange}
                 required
-                disabled={formSubmitted || isLoading}
+                disabled={formSubmitted || isLoading || orderComplete}
               />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="card-expiry" className="block text-sm font-medium mb-1">
+                <Label htmlFor="card-expiry" className="block text-sm font-medium mb-1">
                   Expiry Date
-                </label>
+                </Label>
                 <Input
                   id="card-expiry"
                   name="expiry"
@@ -189,14 +222,14 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                   value={cardInfo.expiry}
                   onChange={handleCardInputChange}
                   required
-                  disabled={formSubmitted || isLoading}
+                  disabled={formSubmitted || isLoading || orderComplete}
                 />
               </div>
               
               <div>
-                <label htmlFor="card-cvc" className="block text-sm font-medium mb-1">
+                <Label htmlFor="card-cvc" className="block text-sm font-medium mb-1">
                   CVC
-                </label>
+                </Label>
                 <Input
                   id="card-cvc"
                   name="cvc"
@@ -205,7 +238,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                   value={cardInfo.cvc}
                   onChange={handleCardInputChange}
                   required
-                  disabled={formSubmitted || isLoading}
+                  disabled={formSubmitted || isLoading || orderComplete}
                 />
               </div>
             </div>
@@ -218,7 +251,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isLoading || formSubmitted}
+            disabled={isLoading || formSubmitted || orderComplete}
           >
             <CreditCard className="w-4 h-4 mr-2" />
             {isLoading ? "Processing..." : `Pay $${amount.toFixed(2)}`}
@@ -227,16 +260,18 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
       </TabsContent>
 
       <TabsContent value="paypal">
+        {shippingInfo && renderShippingInfo()}
+        
         <PayPalScriptProvider options={{ 
-          clientId: "AZLbo88PLuakr0L4eyq_gPT0Yk24QFWrw4GIJbSD9UfUF9xtC5jGm8Qe9lSZUPIyKKgdSLSKLa1BqLYB", // Updated PayPal client ID
+          clientId: "AZLbo88PLuakr0L4eyq_gPT0Yk24QFWrw4GIJbSD9UfUF9xtC5jGm8Qe9lSZUPIyKKgdSLSKLa1BqLYB",
           currency: "USD",
           intent: "capture"
         }}>
-          {!formSubmitted && (
+          {!orderComplete && !formSubmitted && (
             <PayPalButtons
               style={{ layout: "vertical", shape: "rect" }}
               createOrder={(data, actions) => {
-                if (formSubmitted) {
+                if (formSubmitted || orderComplete) {
                   console.log("Preventing duplicate PayPal order creation");
                   return Promise.reject("Order already in progress");
                 }
@@ -248,9 +283,29 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                       amount: {
                         value: amount.toString(),
                         currency_code: "USD"
+                      },
+                      shipping: shippingInfo ? {
+                        name: {
+                          full_name: shippingInfo.name
+                        },
+                        address: {
+                          address_line_1: shippingInfo.address,
+                          admin_area_2: shippingInfo.city,
+                          admin_area_1: shippingInfo.state,
+                          postal_code: shippingInfo.zipCode,
+                          country_code: "SA" // Saudi Arabia country code
+                        }
+                      } : undefined
+                    }
+                  ],
+                  payer: shippingInfo ? {
+                    email_address: shippingInfo.email,
+                    phone: {
+                      phone_number: {
+                        national_number: shippingInfo.phone.replace(/\D/g, '')
                       }
                     }
-                  ]
+                  } : undefined
                 });
               }}
               onApprove={handlePayPalApprove}
@@ -259,12 +314,12 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                 toast.error("PayPal payment failed");
                 setFormSubmitted(false); // Reset to allow retry
               }}
-              disabled={formSubmitted}
+              disabled={formSubmitted || orderComplete}
             />
           )}
-          {formSubmitted && (
+          {(formSubmitted || orderComplete) && (
             <div className="p-4 text-center text-muted-foreground">
-              Processing your payment...
+              {orderComplete ? "Payment completed successfully!" : "Processing your payment..."}
             </div>
           )}
           <p className="text-xs text-muted-foreground mt-3 text-center">

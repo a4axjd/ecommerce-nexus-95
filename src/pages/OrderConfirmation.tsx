@@ -1,233 +1,224 @@
 
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
 import { useCart } from "@/context/CartContext";
-import { useAuth } from "@/context/AuthContext";
+import { Check, ChevronRight, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateOrder } from "@/hooks/useOrders";
-import { trackOrderCompletion } from "@/hooks/useAnalytics";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
 
 const OrderConfirmation = () => {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const { state: cartState, clearCart } = useCart();
   const { currentUser } = useAuth();
-  const createOrder = useCreateOrder();
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(true);
+  const { mutateAsync: createOrder } = useCreateOrder();
   const [orderProcessed, setOrderProcessed] = useState(false);
-
+  
   // Get order details from location state
   const orderDetails = location.state?.orderDetails;
   
   useEffect(() => {
-    // If there's no order details, redirect to homepage
-    if (!orderDetails) {
-      console.error("No order details found");
+    // If no order details or cart is empty, redirect to home
+    if (!orderDetails || cartState.items.length === 0) {
       navigate("/");
       return;
     }
-
-    // If we already created an order or are currently processing, don't create another one
-    if (orderId || orderProcessed) return;
-
-    const saveOrder = async () => {
-      if (orderProcessed) return; // Extra check to prevent duplicate processing
-      
+    
+    // Prevent duplicate order creation
+    if (orderProcessed) {
+      return;
+    }
+    
+    const createNewOrder = async () => {
       try {
-        setIsProcessing(true);
-        setOrderProcessed(true); // Mark that we've started processing
+        setOrderProcessed(true);
         
-        if (!currentUser) {
-          console.error("User not logged in");
-          toast.error("You must be logged in to place an order");
-          navigate("/sign-in");
-          return;
-        }
-
-        console.log("Preparing to create order with items:", cartState.items);
-        console.log("Order details:", orderDetails);
+        // Create order items from cart items
+        const orderItems = cartState.items.map(item => ({
+          productId: item.id,
+          title: item.title,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.image
+        }));
         
-        if (cartState.items.length === 0) {
-          console.error("No items in cart");
-          toast.error("Your cart is empty");
-          navigate("/products");
-          return;
-        }
-
-        // Prepare shipping address with proper field names
-        const shippingAddress = {
-          name: orderDetails.shippingAddress.name,
-          address: orderDetails.shippingAddress.address,
-          city: orderDetails.shippingAddress.city,
-          state: orderDetails.shippingAddress.state || "",
-          postalCode: orderDetails.shippingAddress.zipCode || "", // Convert zipCode to postalCode
-          country: orderDetails.shippingAddress.country,
-          email: orderDetails.shippingAddress.email,
-          phone: orderDetails.shippingAddress.phone
-        };
-
-        // Handle couponCode properly - Firebase doesn't allow undefined values
-        let couponCode = null;
-        if (typeof orderDetails.couponCode === 'string' && orderDetails.couponCode.trim() !== '') {
-          couponCode = orderDetails.couponCode;
-        }
-
-        // Create the order with correct data structure
-        const orderData = {
-          userId: currentUser.uid,
-          items: cartState.items.map(item => ({
-            id: item.id,
-            productId: item.id,
-            title: item.title,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image
-          })),
-          totalAmount: Number(orderDetails.total || cartState.total), // Ensure it's a number
-          status: 'pending' as const,
-          shippingAddress: shippingAddress,
+        // Create new order
+        const newOrder = {
+          userId: currentUser?.uid || "guest",
+          items: orderItems,
+          totalAmount: orderDetails.total,
+          status: "pending" as const,
+          shippingAddress: {
+            name: orderDetails.shippingAddress.name,
+            address: orderDetails.shippingAddress.address,
+            city: orderDetails.shippingAddress.city,
+            state: orderDetails.shippingAddress.state || "",
+            postalCode: orderDetails.shippingAddress.zipCode,
+            country: orderDetails.shippingAddress.country,
+            email: orderDetails.shippingAddress.email,
+            phone: orderDetails.shippingAddress.phone
+          },
           paymentMethod: orderDetails.paymentMethod,
           createdAt: Date.now(),
-          updatedAt: Date.now(),
-          // Only include couponCode if it has a valid value
-          ...(couponCode && { couponCode }),
-          discountAmount: orderDetails.discount ? Number(orderDetails.discount) : 0 // Ensure it's a number
+          updatedAt: Date.now()
         };
-
-        console.log("Creating order with data:", JSON.stringify(orderData));
         
-        // Try to save the user's email to their profile for future reference
-        if (orderDetails.shippingAddress.email && currentUser) {
-          try {
-            const userRef = doc(db, "users", currentUser.uid);
-            const userDoc = await getDoc(userRef);
-            
-            if (userDoc.exists()) {
-              await setDoc(userRef, {
-                ...userDoc.data(),
-                email: orderDetails.shippingAddress.email
-              }, { merge: true });
-            } else {
-              await setDoc(userRef, {
-                email: orderDetails.shippingAddress.email,
-                createdAt: Date.now()
-              });
-            }
-            console.log("Saved user email to profile");
-          } catch (error) {
-            console.error("Error saving user email:", error);
-          }
+        // Add coupon code and discount amount if available
+        if (orderDetails.couponCode) {
+          newOrder.couponCode = orderDetails.couponCode;
         }
         
-        // Create the order
-        const result = await createOrder.mutateAsync(orderData);
-        console.log("Order created:", result);
-        
-        setOrderId(result.id);
-        
-        // Track order completion for analytics
-        await trackOrderCompletion();
-        
-        // Send email notification about the order
-        try {
-          // This is just a placeholder - in a real app, you would call your backend
-          console.log("Would send order notification email to:", orderDetails.shippingAddress.email);
-          
-          // Here you would make an API call to your backend to send the email
-          // For now we'll just log it
-          console.log("Email would contain order details:", {
-            orderId: result.id,
-            items: orderData.items,
-            total: orderData.totalAmount,
-            shippingAddress: orderData.shippingAddress
-          });
-          
-          // Send admin notification
-          console.log("Would send admin notification about new order:", result.id);
-        } catch (emailError) {
-          console.error("Error sending order notification email:", emailError);
+        if (orderDetails.discount > 0) {
+          newOrder.discountAmount = orderDetails.discount;
         }
         
-        // Clear the cart after successful order
+        // Save order to database
+        await createOrder(newOrder);
+        
+        // Clear cart after successful order
         clearCart();
         
+        console.log("Order created successfully!");
         toast.success("Order placed successfully!");
-        setIsProcessing(false);
       } catch (error) {
         console.error("Error creating order:", error);
-        // More detailed error message
-        if (error instanceof Error) {
-          toast.error(`Failed to create order: ${error.message}`);
-        } else {
-          toast.error("Failed to create order. Please try again.");
-        }
-        setIsProcessing(false);
+        toast.error("Failed to create order: " + (error instanceof Error ? error.message : String(error)));
+        setOrderProcessed(false);
       }
     };
-
-    saveOrder();
-  }, [orderDetails, navigate, currentUser, cartState, clearCart, createOrder, orderId, orderProcessed]);
-
-  if (!orderDetails && !orderId) {
-    return null; // Will redirect in useEffect
+    
+    createNewOrder();
+  }, [orderDetails, cartState, navigate, clearCart, createOrder, currentUser?.uid, orderProcessed]);
+  
+  // If no order details, show loading
+  if (!orderDetails) {
+    return <div>Loading...</div>;
   }
-
+  
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-grow pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-3xl">
-          <div className="bg-white p-8 rounded-lg shadow-md border text-center">
-            <div className="mb-6 flex justify-center">
-              <CheckCircle className="h-24 w-24 text-green-500" />
+      <main className="flex-grow container mx-auto px-4 py-16">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+              <Check className="h-8 w-8 text-primary" />
             </div>
-            
-            <h1 className="text-3xl font-bold mb-2">Thank You for Your Order!</h1>
-            <p className="text-lg text-gray-600 mb-6">
-              Your order has been received and is being processed.
-              {orderDetails.shippingAddress.email && (
-                <span> A confirmation has been sent to your email.</span>
-              )}
+            <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
+            <p className="text-muted-foreground">
+              Thank you for your purchase. Your order has been placed successfully.
             </p>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg border mb-8">
+            <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
             
-            <div className="bg-gray-50 p-6 rounded-lg mb-6 text-left">
-              <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-              <div className="space-y-4">
-                <p><span className="font-medium">Order ID:</span> {isProcessing ? "Processing..." : orderId}</p>
-                <p><span className="font-medium">Order Date:</span> {new Date().toLocaleDateString()}</p>
-                <p>
-                  <span className="font-medium">Shipping Address:</span><br />
-                  {orderDetails.shippingAddress.name}<br />
-                  {orderDetails.shippingAddress.address}<br />
-                  {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state || ""} {orderDetails.shippingAddress.zipCode || ""}<br />
-                  {orderDetails.shippingAddress.country}
-                </p>
-                <p>
-                  <span className="font-medium">Contact:</span><br />
-                  {orderDetails.shippingAddress.email && <span>Email: {orderDetails.shippingAddress.email}<br /></span>}
-                  {orderDetails.shippingAddress.phone && <span>Phone: {orderDetails.shippingAddress.phone}</span>}
-                </p>
-                <p><span className="font-medium">Payment Method:</span> {orderDetails.paymentMethod}</p>
-                <p className="font-semibold">Total: ${(Number(orderDetails.total) || cartState.total).toFixed(2)}</p>
+            <div className="grid gap-y-2">
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Order Date</span>
+                <span>{new Date(orderDetails.date).toLocaleDateString()}</span>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Payment Method</span>
+                <span>{orderDetails.paymentMethod}</span>
+              </div>
+              
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Shipping Address</span>
+                <div className="text-right">
+                  <p>{orderDetails.shippingAddress.name}</p>
+                  <p>{orderDetails.shippingAddress.address}</p>
+                  <p>{orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state} {orderDetails.shippingAddress.zipCode}</p>
+                  <p>{orderDetails.shippingAddress.country}</p>
+                </div>
+              </div>
+              
+              <div className="flex justify-between py-2">
+                <span className="font-semibold">Total Amount</span>
+                <span className="font-semibold">${orderDetails.total.toFixed(2)}</span>
+              </div>
+              
+              {orderDetails.discount > 0 && (
+                <div className="flex justify-between py-2 text-green-600">
+                  <span>Discount Applied</span>
+                  <span>-${orderDetails.discount.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg border mb-8">
+            <h2 className="text-lg font-semibold mb-4">What's Next?</h2>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="bg-primary/10 rounded-full p-2 mt-0.5">
+                  <span className="text-xs font-semibold">1</span>
+                </div>
+                <div>
+                  <p className="font-medium">Order Confirmation</p>
+                  <p className="text-sm text-muted-foreground">
+                    You'll receive an order confirmation email with details of your purchase.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="bg-primary/10 rounded-full p-2 mt-0.5">
+                  <span className="text-xs font-semibold">2</span>
+                </div>
+                <div>
+                  <p className="font-medium">Order Processing</p>
+                  <p className="text-sm text-muted-foreground">
+                    We're preparing your order for shipment. This typically takes 1-2 business days.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="bg-primary/10 rounded-full p-2 mt-0.5">
+                  <span className="text-xs font-semibold">3</span>
+                </div>
+                <div>
+                  <p className="font-medium">Shipping</p>
+                  <p className="text-sm text-muted-foreground">
+                    Once your order ships, you'll receive a shipping confirmation email with tracking information.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-3">
+                <div className="bg-primary/10 rounded-full p-2 mt-0.5">
+                  <span className="text-xs font-semibold">4</span>
+                </div>
+                <div>
+                  <p className="font-medium">Delivery</p>
+                  <p className="text-sm text-muted-foreground">
+                    Your order will be delivered within 3-5 business days of shipping.
+                  </p>
+                </div>
               </div>
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild>
-                <Link to="/">Continue Shopping</Link>
-              </Button>
-              <Button variant="outline" asChild>
-                <Link to="/account">View My Orders</Link>
-              </Button>
-            </div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row gap-4 justify-center">
+            <Button variant="outline" asChild>
+              <a href="/account">
+                View Order History
+              </a>
+            </Button>
+            <Button asChild>
+              <a href="/products">
+                <ShoppingBag className="mr-2 h-4 w-4" />
+                Continue Shopping
+              </a>
+            </Button>
           </div>
         </div>
       </main>

@@ -328,7 +328,7 @@ const Checkout = () => {
                         id="country"
                         value="Saudi Arabia"
                         readOnly
-                        className="bg-gray-50"
+                        className="bg-muted"
                       />
                     </div>
                   </div>
@@ -381,7 +381,11 @@ const Checkout = () => {
                     </p>
                   </div>
                 </div>
-                <PaymentForm onSuccess={handlePaymentSuccess} amount={total} />
+                <PaymentForm 
+                  onSuccess={handlePaymentSuccess} 
+                  amount={total} 
+                  shippingInfo={shippingInfo}
+                />
                 <div className="flex items-center justify-between mt-6 pt-4 border-t">
                   <Button
                     type="button"
