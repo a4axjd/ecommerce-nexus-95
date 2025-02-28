@@ -5,6 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PaymentForm } from "@/components/PaymentForm";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -13,9 +14,11 @@ import {
   ChevronRight, 
   CreditCard, 
   Home, 
+  Mail,
   MapPin, 
   PackageCheck, 
   PackageOpen, 
+  Phone,
   ShieldCheck, 
   ShoppingBag, 
   Trash 
@@ -27,15 +30,16 @@ const steps = ["Cart", "Shipping", "Payment", "Confirmation"];
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0); // Start at cart step
   const [shippingInfo, setShippingInfo] = useState({
-    fullName: "",
+    name: "",
     address: "",
     city: "",
     state: "",
     zipCode: "",
     country: "United States",
     phone: "",
+    email: "", // Add email field
   });
   const [couponCode, setCouponCode] = useState("");
   const [isApplying, setIsApplying] = useState(false);
@@ -43,6 +47,7 @@ const Checkout = () => {
   
   const { state: cartState, updateQuantity, removeFromCart, clearCart } = useCart();
   const { data: allProducts = [] } = useProducts();
+  const { currentUser } = useAuth(); // Get the current user
   
   // Get suggested products based on cart items (different category)
   const cartCategories = Array.from(
@@ -85,8 +90,23 @@ const Checkout = () => {
   };
 
   const handlePaymentSuccess = () => {
-    clearCart();
-    navigate("/order-confirmation");
+    // Get the selected payment method based on the active tab
+    const paymentMethodElement = document.querySelector('[role="tabpanel"][data-state="active"]');
+    const paymentMethod = paymentMethodElement?.id === "card" ? "Credit Card" : "PayPal";
+    
+    // Navigate to confirmation with order details
+    navigate("/order-confirmation", {
+      state: {
+        orderDetails: {
+          shippingAddress: shippingInfo,
+          paymentMethod,
+          total,
+          date: new Date().toISOString(),
+          discount,
+          couponCode: discount > 0 ? couponCode : undefined
+        }
+      }
+    });
   };
 
   if (cartState.items.length === 0 && currentStep === 0) {
@@ -227,10 +247,32 @@ const Checkout = () => {
                     </label>
                     <Input
                       id="fullName"
-                      value={shippingInfo.fullName}
-                      onChange={(e) => setShippingInfo({...shippingInfo, fullName: e.target.value})}
+                      value={shippingInfo.name}
+                      onChange={(e) => setShippingInfo({...shippingInfo, name: e.target.value})}
                       required
                     />
+                  </div>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium mb-1">
+                      Email Address
+                    </label>
+                    <div className="flex">
+                      <div className="flex items-center px-3 bg-muted border border-r-0 border-input rounded-l-md">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={shippingInfo.email}
+                        onChange={(e) => setShippingInfo({...shippingInfo, email: e.target.value})}
+                        className="rounded-l-none"
+                        placeholder="For order confirmation and updates"
+                        required
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      We'll send your order confirmation and updates to this email.
+                    </p>
                   </div>
                   <div>
                     <label htmlFor="address" className="block text-sm font-medium mb-1">
@@ -295,13 +337,19 @@ const Checkout = () => {
                     <label htmlFor="phone" className="block text-sm font-medium mb-1">
                       Phone Number
                     </label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={shippingInfo.phone}
-                      onChange={(e) => setShippingInfo({...shippingInfo, phone: e.target.value})}
-                      required
-                    />
+                    <div className="flex">
+                      <div className="flex items-center px-3 bg-muted border border-r-0 border-input rounded-l-md">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={shippingInfo.phone}
+                        onChange={(e) => setShippingInfo({...shippingInfo, phone: e.target.value})}
+                        className="rounded-l-none"
+                        required
+                      />
+                    </div>
                   </div>
                   <div className="flex items-center justify-between mt-6 pt-4 border-t">
                     <Button

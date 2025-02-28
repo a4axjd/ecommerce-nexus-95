@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -24,18 +24,59 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useOrders, Order, useUpdateOrderStatus } from "@/hooks/useOrders";
-import { Search } from "lucide-react";
+import { Search, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AdminSidebar } from "@/components/AdminSidebar";
+import { collection, onSnapshot, query, orderBy, where, Timestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const OrdersAdmin = () => {
-  const { data: orders = [], isLoading } = useOrders();
+  const { data: orders = [], isLoading, refetch } = useOrders();
   const updateOrderStatus = useUpdateOrderStatus();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [lastChecked, setLastChecked] = useState<number>(Date.now());
+  
+  // Set up real-time listener for new orders
+  useEffect(() => {
+    // Get timestamp for "last checked"
+    const lastCheckedTime = new Date(lastChecked);
+    
+    // Set up listener for new orders
+    const q = query(
+      collection(db, "orders"),
+      where("createdAt", ">", lastCheckedTime.getTime()),
+      orderBy("createdAt", "desc")
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const newOrders = snapshot.docs.length;
+      
+      if (newOrders > 0 && lastChecked > 0) {
+        // Only show notification if this isn't the first load
+        setNewOrdersCount(prevCount => prevCount + newOrders);
+        toast.info(`${newOrders} new order${newOrders > 1 ? 's' : ''} received!`, {
+          action: {
+            label: "View",
+            onClick: () => {
+              refetch();
+              setNewOrdersCount(0);
+              setLastChecked(Date.now());
+            }
+          }
+        });
+      }
+    }, (error) => {
+      console.error("Error setting up order listener:", error);
+    });
+    
+    // Clean up listener
+    return () => unsubscribe();
+  }, [lastChecked, refetch]);
   
   // Filter orders based on search and status
   const filteredOrders = orders.filter(order => {
@@ -81,13 +122,43 @@ const OrdersAdmin = () => {
     }
   };
 
+  const handleRefresh = () => {
+    refetch();
+    setNewOrdersCount(0);
+    setLastChecked(Date.now());
+    toast.success("Orders refreshed");
+  };
+
   return (
     <div className="flex h-screen">
       <AdminSidebar />
       
       <main className="flex-1 overflow-y-auto p-8">
         <div className="max-w-6xl mx-auto">
-          <h1 className="text-2xl font-semibold mb-8">Order Management</h1>
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-2xl font-semibold">Order Management</h1>
+            <div className="flex items-center gap-4">
+              {newOrdersCount > 0 && (
+                <div className="relative">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRefresh}
+                    className="flex items-center gap-2"
+                  >
+                    <Bell className="h-4 w-4" />
+                    <span>{newOrdersCount} new order{newOrdersCount > 1 ? 's' : ''}</span>
+                  </Button>
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+                  </span>
+                </div>
+              )}
+              <Button variant="outline" onClick={handleRefresh}>
+                Refresh
+              </Button>
+            </div>
+          </div>
 
           <div className="space-y-6">
             {/* Filters and Search */}
@@ -137,6 +208,7 @@ const OrdersAdmin = () => {
                         <TableHead>Order ID</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Customer</TableHead>
+                        <TableHead>Contact</TableHead>
                         <TableHead>Total</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
@@ -148,6 +220,16 @@ const OrdersAdmin = () => {
                           <TableCell className="font-medium">{order.id.slice(0, 8)}...</TableCell>
                           <TableCell>{format(new Date(order.createdAt), 'MMM dd, yyyy')}</TableCell>
                           <TableCell>{order.shippingAddress.name}</TableCell>
+                          <TableCell>
+                            {order.shippingAddress.email ? (
+                              <div className="text-xs">
+                                {order.shippingAddress.email}<br />
+                                {order.shippingAddress.phone}
+                              </div>
+                            ) : (
+                              order.shippingAddress.phone
+                            )}
+                          </TableCell>
                           <TableCell>${order.totalAmount.toFixed(2)}</TableCell>
                           <TableCell>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
@@ -226,6 +308,12 @@ const OrdersAdmin = () => {
                   <p>City: {selectedOrder.shippingAddress.city}</p>
                   <p>Postal Code: {selectedOrder.shippingAddress.postalCode}</p>
                   <p>Country: {selectedOrder.shippingAddress.country}</p>
+                  {selectedOrder.shippingAddress.email && (
+                    <p>Email: {selectedOrder.shippingAddress.email}</p>
+                  )}
+                  {selectedOrder.shippingAddress.phone && (
+                    <p>Phone: {selectedOrder.shippingAddress.phone}</p>
+                  )}
                 </div>
               </div>
               

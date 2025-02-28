@@ -10,6 +10,8 @@ import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 import { useCreateOrder } from "@/hooks/useOrders";
 import { trackOrderCompletion } from "@/hooks/useAnalytics";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 const OrderConfirmation = () => {
   const navigate = useNavigate();
@@ -18,13 +20,15 @@ const OrderConfirmation = () => {
   const { currentUser } = useAuth();
   const createOrder = useCreateOrder();
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(true);
 
-  // Get order details from location state or query params
+  // Get order details from location state
   const orderDetails = location.state?.orderDetails;
   
   useEffect(() => {
     // If there's no order details, redirect to homepage
-    if (!orderDetails && !orderId) {
+    if (!orderDetails) {
+      console.error("No order details found");
       navigate("/");
       return;
     }
@@ -34,7 +38,10 @@ const OrderConfirmation = () => {
 
     const saveOrder = async () => {
       try {
+        setIsProcessing(true);
+        
         if (!currentUser) {
+          console.error("User not logged in");
           toast.error("You must be logged in to place an order");
           navigate("/sign-in");
           return;
@@ -43,7 +50,9 @@ const OrderConfirmation = () => {
         console.log("Preparing to create order with items:", cartState.items);
         
         if (cartState.items.length === 0) {
-          console.log("No items in cart, not creating order");
+          console.error("No items in cart");
+          toast.error("Your cart is empty");
+          navigate("/products");
           return;
         }
 
@@ -51,19 +60,49 @@ const OrderConfirmation = () => {
         const orderData = {
           userId: currentUser.uid,
           items: cartState.items.map(item => ({
-            ...item,
-            productId: item.id
+            id: item.id,
+            productId: item.id,
+            title: item.title,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image
           })),
           totalAmount: cartState.total,
           status: 'pending' as const,
           shippingAddress: orderDetails.shippingAddress,
           paymentMethod: orderDetails.paymentMethod,
           createdAt: Date.now(),
-          updatedAt: Date.now()
+          updatedAt: Date.now(),
+          couponCode: orderDetails.couponCode,
+          discountAmount: orderDetails.discount
         };
 
         console.log("Creating order with data:", orderData);
         
+        // Try to save the user's email to their profile for future reference
+        if (orderDetails.shippingAddress.email && currentUser) {
+          try {
+            const userRef = doc(db, "users", currentUser.uid);
+            const userDoc = await getDoc(userRef);
+            
+            if (userDoc.exists()) {
+              await setDoc(userRef, {
+                ...userDoc.data(),
+                email: orderDetails.shippingAddress.email
+              }, { merge: true });
+            } else {
+              await setDoc(userRef, {
+                email: orderDetails.shippingAddress.email,
+                createdAt: Date.now()
+              });
+            }
+            console.log("Saved user email to profile");
+          } catch (error) {
+            console.error("Error saving user email:", error);
+          }
+        }
+        
+        // Create the order
         const result = await createOrder.mutateAsync(orderData);
         console.log("Order created:", result);
         
@@ -72,13 +111,35 @@ const OrderConfirmation = () => {
         // Track order completion for analytics
         await trackOrderCompletion();
         
+        // Send email notification about the order
+        try {
+          // This is just a placeholder - in a real app, you would call your backend
+          console.log("Would send order notification email to:", orderDetails.shippingAddress.email);
+          
+          // Here you would make an API call to your backend to send the email
+          // For now we'll just log it
+          console.log("Email would contain order details:", {
+            orderId: result.id,
+            items: orderData.items,
+            total: orderData.totalAmount,
+            shippingAddress: orderData.shippingAddress
+          });
+          
+          // Send admin notification
+          console.log("Would send admin notification about new order:", result.id);
+        } catch (emailError) {
+          console.error("Error sending order notification email:", emailError);
+        }
+        
         // Clear the cart after successful order
         clearCart();
         
         toast.success("Order placed successfully!");
+        setIsProcessing(false);
       } catch (error) {
         console.error("Error creating order:", error);
         toast.error("Failed to create order. Please try again.");
+        setIsProcessing(false);
       }
     };
 
@@ -103,12 +164,15 @@ const OrderConfirmation = () => {
             <h1 className="text-3xl font-bold mb-2">Thank You for Your Order!</h1>
             <p className="text-lg text-gray-600 mb-6">
               Your order has been received and is being processed.
+              {orderDetails.shippingAddress.email && (
+                <span> A confirmation has been sent to your email.</span>
+              )}
             </p>
             
             <div className="bg-gray-50 p-6 rounded-lg mb-6 text-left">
               <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
               <div className="space-y-4">
-                <p><span className="font-medium">Order ID:</span> {orderId || "Processing..."}</p>
+                <p><span className="font-medium">Order ID:</span> {isProcessing ? "Processing..." : orderId}</p>
                 <p><span className="font-medium">Order Date:</span> {new Date().toLocaleDateString()}</p>
                 <p>
                   <span className="font-medium">Shipping Address:</span><br />
@@ -116,6 +180,11 @@ const OrderConfirmation = () => {
                   {orderDetails.shippingAddress.address}<br />
                   {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.postalCode}<br />
                   {orderDetails.shippingAddress.country}
+                </p>
+                <p>
+                  <span className="font-medium">Contact:</span><br />
+                  {orderDetails.shippingAddress.email && <span>Email: {orderDetails.shippingAddress.email}<br /></span>}
+                  {orderDetails.shippingAddress.phone && <span>Phone: {orderDetails.shippingAddress.phone}</span>}
                 </p>
                 <p><span className="font-medium">Payment Method:</span> {orderDetails.paymentMethod}</p>
                 <p className="font-semibold">Total: ${cartState.total.toFixed(2)}</p>
