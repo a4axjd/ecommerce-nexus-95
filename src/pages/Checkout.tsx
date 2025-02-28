@@ -291,7 +291,7 @@ const Checkout = () => {
                     <h3 className="text-sm font-medium">Secure Payment</h3>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Your payment information is encrypted and secure. We never store your full credit card details.
+                    Your payment information is encrypted and secure. We never store your full payment details.
                   </p>
                 </div>
                 
