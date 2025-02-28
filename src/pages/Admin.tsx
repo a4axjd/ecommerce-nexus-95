@@ -20,6 +20,9 @@ const Admin = () => {
     category: "",
     image: "",
     featured: false,
+    // New fields
+    shippingInfo: "",
+    returnPolicy: "",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -54,6 +57,8 @@ const Admin = () => {
         category: formData.category,
         image: formData.image,
         featured: formData.featured,
+        shippingInfo: formData.shippingInfo,
+        returnPolicy: formData.returnPolicy,
       };
 
       console.log("Product data prepared:", productData);
@@ -85,6 +90,8 @@ const Admin = () => {
         category: "",
         image: "",
         featured: false,
+        shippingInfo: "",
+        returnPolicy: "",
       });
       setSelectedProduct(null);
       
@@ -111,6 +118,8 @@ const Admin = () => {
       category: product.category,
       image: product.image,
       featured: product.featured || false,
+      shippingInfo: product.shippingInfo || "",
+      returnPolicy: product.returnPolicy || "",
     });
   };
 
@@ -215,6 +224,34 @@ const Admin = () => {
                   />
                 </div>
 
+                <div>
+                  <label htmlFor="shippingInfo" className="block text-sm font-medium mb-1">
+                    Shipping Information
+                  </label>
+                  <textarea
+                    id="shippingInfo"
+                    name="shippingInfo"
+                    value={formData.shippingInfo}
+                    onChange={handleInputChange}
+                    className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Shipping details, delivery times, etc."
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="returnPolicy" className="block text-sm font-medium mb-1">
+                    Return Policy
+                  </label>
+                  <textarea
+                    id="returnPolicy"
+                    name="returnPolicy"
+                    value={formData.returnPolicy}
+                    onChange={handleInputChange}
+                    className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    placeholder="Return policy, conditions, process, etc."
+                  />
+                </div>
+
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -251,6 +288,8 @@ const Admin = () => {
                           category: "",
                           image: "",
                           featured: false,
+                          shippingInfo: "",
+                          returnPolicy: "",
                         });
                       }}
                       disabled={isSubmitting}

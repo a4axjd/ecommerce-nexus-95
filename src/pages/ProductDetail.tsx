@@ -1,19 +1,52 @@
 
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
-import { Minus, Plus, ShoppingBag, Tag, Clock, Check, ArrowRight } from "lucide-react";
+import { Minus, Plus, ShoppingBag, Tag, Clock, Check, ArrowRight, Heart, Star } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { useProduct, useProducts } from "@/hooks/useProducts";
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query, 
+  where, 
+  orderBy, 
+  Timestamp,
+  doc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
+  getDoc
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  createdAt: Timestamp;
+}
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
+  const [activeTab, setActiveTab] = useState("description");
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [newReview, setNewReview] = useState({ rating: 5, comment: "" });
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [averageRating, setAverageRating] = useState(0);
   const { addToCart } = useCart();
+  const { currentUser } = useAuth();
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
   
   const { data: product, isLoading } = useProduct(id || "");
@@ -40,6 +73,148 @@ const ProductDetail = () => {
   const relatedProducts = allProducts
     .filter(p => p.id !== id && p.category === product?.category)
     .slice(0, 4);
+
+  // Fetch reviews for this product
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!id) return;
+      
+      try {
+        const q = query(
+          collection(db, "reviews"),
+          where("productId", "==", id),
+          orderBy("createdAt", "desc")
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const reviewsData: Review[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          reviewsData.push({ id: doc.id, ...doc.data() } as Review);
+        });
+        
+        setReviews(reviewsData);
+        
+        // Calculate average rating
+        if (reviewsData.length > 0) {
+          const totalRating = reviewsData.reduce((sum, review) => sum + review.rating, 0);
+          setAverageRating(Math.round((totalRating / reviewsData.length) * 10) / 10);
+        }
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+      }
+    };
+    
+    fetchReviews();
+  }, [id]);
+  
+  // Check if product is in wishlist
+  useEffect(() => {
+    const checkWishlist = async () => {
+      if (!currentUser || !id) return;
+      
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const wishlist = userData.wishlist || [];
+          setIsInWishlist(wishlist.includes(id));
+        }
+      } catch (error) {
+        console.error("Error checking wishlist:", error);
+      }
+    };
+    
+    checkWishlist();
+  }, [currentUser, id]);
+  
+  const handleAddToWishlist = async () => {
+    if (!currentUser) {
+      toast.error("Please sign in to add items to your wishlist");
+      return;
+    }
+    
+    if (!id) return;
+    
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      
+      if (isInWishlist) {
+        // Remove from wishlist
+        await updateDoc(userRef, {
+          wishlist: arrayRemove(id)
+        });
+        setIsInWishlist(false);
+        toast.success("Removed from wishlist");
+      } else {
+        // Add to wishlist
+        await updateDoc(userRef, {
+          wishlist: arrayUnion(id)
+        });
+        setIsInWishlist(true);
+        toast.success("Added to wishlist");
+      }
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      toast.error("Failed to update wishlist");
+    }
+  };
+  
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentUser) {
+      toast.error("Please sign in to leave a review");
+      return;
+    }
+    
+    if (!id) return;
+    
+    try {
+      const reviewData = {
+        productId: id,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || "Anonymous",
+        rating: newReview.rating,
+        comment: newReview.comment,
+        createdAt: Timestamp.now()
+      };
+      
+      await addDoc(collection(db, "reviews"), reviewData);
+      
+      toast.success("Review submitted successfully");
+      
+      // Refresh reviews
+      const q = query(
+        collection(db, "reviews"),
+        where("productId", "==", id),
+        orderBy("createdAt", "desc")
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const reviewsData: Review[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        reviewsData.push({ id: doc.id, ...doc.data() } as Review);
+      });
+      
+      setReviews(reviewsData);
+      
+      // Recalculate average rating
+      if (reviewsData.length > 0) {
+        const totalRating = reviewsData.reduce((sum, review) => sum + review.rating, 0);
+        setAverageRating(Math.round((totalRating / reviewsData.length) * 10) / 10);
+      }
+      
+      // Reset form
+      setNewReview({ rating: 5, comment: "" });
+    } catch (error) {
+      console.error("Error submitting review:", error);
+      toast.error("Failed to submit review");
+    }
+  };
   
   if (isLoading) {
     return (
@@ -126,11 +301,11 @@ const ProductDetail = () => {
                   </span>
                   <div className="flex items-center text-amber-500">
                     {Array(5).fill(0).map((_, i) => (
-                      <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                        <path d="M12 17.27L18.18 21L16.54 13.97L22 9.24L14.81 8.63L12 2L9.19 8.63L2 9.24L7.46 13.97L5.82 21L12 17.27Z" />
-                      </svg>
+                      <Star key={i} className={`w-4 h-4 ${i < Math.floor(averageRating) ? 'fill-amber-500' : 'fill-gray-200'}`} />
                     ))}
-                    <span className="text-xs text-muted-foreground ml-1">(24 reviews)</span>
+                    <span className="text-xs text-muted-foreground ml-1">
+                      ({averageRating} • {reviews.length} reviews)
+                    </span>
                   </div>
                 </div>
                 <h1 className="text-3xl font-semibold">{product.title}</h1>
@@ -182,17 +357,27 @@ const ProductDetail = () => {
                   <ShoppingBag className="mr-2 h-5 w-5" />
                   Add to Cart
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  size="lg"
-                  onClick={() => {
-                    handleAddToCart();
-                    navigate("/checkout");
-                  }}
-                >
-                  Buy Now
-                </Button>
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    size="lg"
+                    onClick={() => {
+                      handleAddToCart();
+                      navigate("/checkout");
+                    }}
+                  >
+                    Buy Now
+                  </Button>
+                  <Button
+                    variant={isInWishlist ? "default" : "outline"}
+                    className={`w-full ${isInWishlist ? 'bg-red-500 hover:bg-red-600 border-red-500' : ''}`}
+                    size="lg"
+                    onClick={handleAddToWishlist}
+                  >
+                    <Heart className={`h-5 w-5 ${isInWishlist ? 'fill-white' : ''}`} />
+                  </Button>
+                </div>
               </div>
 
               {/* Product Tags */}
@@ -223,6 +408,8 @@ const ProductDetail = () => {
                     title={product.title}
                     price={product.price}
                     image={product.image}
+                    category={product.category}
+                    featured={product.featured}
                   />
                 ))}
               </div>
@@ -231,24 +418,165 @@ const ProductDetail = () => {
 
           {/* Product Details Tabs */}
           <div className="border-t pt-8">
-            <div className="flex border-b mb-6">
-              <button className="px-4 py-2 text-primary border-b-2 border-primary font-medium">Description</button>
-              <button className="px-4 py-2 text-muted-foreground">Reviews (24)</button>
-              <button className="px-4 py-2 text-muted-foreground">Shipping & Returns</button>
+            <div className="flex border-b mb-6 overflow-x-auto whitespace-nowrap">
+              <button 
+                className={`px-4 py-2 font-medium ${activeTab === "description" 
+                  ? "text-primary border-b-2 border-primary" 
+                  : "text-muted-foreground"}`}
+                onClick={() => setActiveTab("description")}
+              >
+                Description
+              </button>
+              <button 
+                className={`px-4 py-2 font-medium ${activeTab === "reviews" 
+                  ? "text-primary border-b-2 border-primary" 
+                  : "text-muted-foreground"}`}
+                onClick={() => setActiveTab("reviews")}
+              >
+                Reviews ({reviews.length})
+              </button>
+              <button 
+                className={`px-4 py-2 font-medium ${activeTab === "shipping" 
+                  ? "text-primary border-b-2 border-primary" 
+                  : "text-muted-foreground"}`}
+                onClick={() => setActiveTab("shipping")}
+              >
+                Shipping & Returns
+              </button>
             </div>
 
-            <div className="prose max-w-none">
-              <p>{product.description}</p>
-              <p className="mt-4">
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-              </p>
-              <ul className="mt-4">
-                <li>High-quality materials</li>
-                <li>Durable construction</li>
-                <li>Easy to clean and maintain</li>
-                <li>Perfect for everyday use</li>
-              </ul>
-            </div>
+            {/* Description Tab */}
+            {activeTab === "description" && (
+              <div className="prose max-w-none">
+                <p>{product.description}</p>
+                <p className="mt-4">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                </p>
+                <ul className="mt-4">
+                  <li>High-quality materials</li>
+                  <li>Durable construction</li>
+                  <li>Easy to clean and maintain</li>
+                  <li>Perfect for everyday use</li>
+                </ul>
+              </div>
+            )}
+
+            {/* Reviews Tab */}
+            {activeTab === "reviews" && (
+              <div className="space-y-8">
+                {/* Reviews List */}
+                {reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="border-b pb-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center">
+                            <div className="bg-primary text-primary-foreground h-10 w-10 rounded-full flex items-center justify-center font-semibold text-sm mr-3">
+                              {review.userName.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="font-medium">{review.userName}</span>
+                          </div>
+                          <div className="flex items-center">
+                            {Array(5).fill(0).map((_, i) => (
+                              <Star key={i} className={`w-4 h-4 ${i < review.rating ? 'fill-amber-500' : 'fill-gray-200'}`} />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-gray-600">{review.comment}</p>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {review.createdAt.toDate().toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No reviews yet. Be the first to leave a review!
+                  </div>
+                )}
+
+                {/* Review Form */}
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold mb-4">Write a Review</h3>
+                  
+                  {currentUser ? (
+                    <form onSubmit={handleSubmitReview} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Rating</label>
+                        <div className="flex">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setNewReview({ ...newReview, rating: star })}
+                              className="p-1"
+                            >
+                              <Star className={`w-6 h-6 ${star <= newReview.rating ? 'fill-amber-500 text-amber-500' : 'fill-gray-200 text-gray-200'}`} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="comment" className="block text-sm font-medium mb-1">Your Review</label>
+                        <textarea
+                          id="comment"
+                          rows={4}
+                          value={newReview.comment}
+                          onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                          className="w-full rounded-md border border-input bg-background px-3 py-2"
+                          placeholder="Share your experience with this product..."
+                          required
+                        />
+                      </div>
+                      
+                      <Button type="submit" className="mt-2">
+                        Submit Review
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className="mb-2">Please sign in to leave a review</p>
+                      <Button asChild variant="outline">
+                        <Link to="/sign-in">Sign In</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Shipping & Returns Tab */}
+            {activeTab === "shipping" && (
+              <div className="prose max-w-none">
+                <h3>Shipping Information</h3>
+                <p>
+                  We ship to locations worldwide. Shipping times and costs will vary based on location. 
+                  Standard shipping usually takes 3-7 business days within the continental United States.
+                </p>
+                
+                <h3 className="mt-6">Return Policy</h3>
+                <p>
+                  If you're not completely satisfied with your purchase, you may return it within 30 days 
+                  of receipt for a full refund of the item price. To be eligible for a return, your item must 
+                  be in the same condition that you received it, unworn or unused, with tags, and in its 
+                  original packaging.
+                </p>
+                
+                <h4 className="mt-4">How to Return</h4>
+                <ol>
+                  <li>Contact our customer service team to obtain a return authorization</li>
+                  <li>Package your item securely</li>
+                  <li>Include your order number and return reason</li>
+                  <li>Ship the item to the address provided</li>
+                </ol>
+                
+                <p className="text-sm text-muted-foreground mt-4">
+                  Please note that shipping costs for returns are the responsibility of the customer unless 
+                  the item received was defective or incorrect.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </main>

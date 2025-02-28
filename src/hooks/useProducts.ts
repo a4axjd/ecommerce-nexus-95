@@ -11,6 +11,8 @@ export interface Product {
   image: string;
   category: string;
   featured?: boolean;
+  shippingInfo?: string;
+  returnPolicy?: string;
 }
 
 export const useProducts = () => {
@@ -54,5 +56,21 @@ export const useProduct = (id: string) => {
       } as Product;
     },
     enabled: !!id,
+  });
+};
+
+export const useProductsByCategory = (category: string) => {
+  return useQuery({
+    queryKey: ["productsByCategory", category],
+    queryFn: async () => {
+      const querySnapshot = await getDocs(collection(db, "products"));
+      return querySnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter((product: Product) => product.category === category) as Product[];
+    },
+    enabled: !!category,
   });
 };

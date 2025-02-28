@@ -1,379 +1,286 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
-import { useUserOrders, Order } from "@/hooks/useOrders";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { ProductCard } from "@/components/ProductCard";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { useNavigate } from "react-router-dom";
-import { 
-  Package, 
-  User, 
-  ShoppingBag, 
-  LogOut, 
-  ChevronRight,
-  Truck,
-  CheckCircle,
-  Timer
-} from "lucide-react";
+import { User, Package, Heart, CreditCard, LogOut } from "lucide-react";
+
+interface WishlistProduct {
+  id: string;
+  title: string;
+  price: number;
+  image: string;
+  category?: string;
+}
 
 const UserAccount = () => {
-  const { currentUser, signOut } = useAuth();
+  const { currentUser, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState("profile");
+  const [wishlistProducts, setWishlistProducts] = useState<WishlistProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  const { data: orders = [], isLoading } = useUserOrders();
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
 
-  const viewOrderDetails = (order: Order) => {
-    setSelectedOrder(order);
-    setOrderDetailsOpen(true);
-  };
+  useEffect(() => {
+    if (!currentUser) {
+      navigate("/sign-in");
+      return;
+    }
 
-  const getStatusIcon = (status: Order["status"]) => {
-    switch (status) {
-      case "pending":
-        return <Timer className="h-5 w-5 text-yellow-500" />;
-      case "processing":
-        return <Package className="h-5 w-5 text-blue-500" />;
-      case "shipped":
-        return <Truck className="h-5 w-5 text-indigo-500" />;
-      case "delivered":
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case "cancelled":
-        return <ShoppingBag className="h-5 w-5 text-red-500" />;
-      default:
-        return <Package className="h-5 w-5" />;
+    const fetchWishlist = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch user document to get wishlist IDs
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const wishlistIds = userData.wishlist || [];
+          
+          // Fetch product details for each ID in wishlist
+          const productsData: WishlistProduct[] = [];
+          
+          for (const productId of wishlistIds) {
+            const productRef = doc(db, "products", productId);
+            const productSnap = await getDoc(productRef);
+            
+            if (productSnap.exists()) {
+              const productData = productSnap.data();
+              productsData.push({
+                id: productId,
+                title: productData.title,
+                price: productData.price,
+                image: productData.image,
+                category: productData.category
+              });
+            }
+          }
+          
+          setWishlistProducts(productsData);
+        }
+      } catch (error) {
+        console.error("Error fetching wishlist:", error);
+        toast.error("Failed to load wishlist");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchWishlist();
+  }, [currentUser, navigate]);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/");
+      toast.success("Logged out successfully");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out");
     }
   };
 
-  const getOrderStatusText = (status: Order["status"]) => {
-    switch (status) {
-      case "pending":
-        return "Your order is pending";
-      case "processing":
-        return "Your order is being processed";
-      case "shipped":
-        return "Your order is on the way";
-      case "delivered":
-        return "Your order has been delivered";
-      case "cancelled":
-        return "Your order has been cancelled";
-      default:
-        return "";
-    }
-  };
-
-  const getStatusColor = (status: Order["status"]) => {
-    switch (status) {
-      case "pending":
-        return "text-yellow-600 bg-yellow-100";
-      case "processing":
-        return "text-blue-600 bg-blue-100";
-      case "shipped":
-        return "text-indigo-600 bg-indigo-100";
-      case "delivered":
-        return "text-green-600 bg-green-100";
-      case "cancelled":
-        return "text-red-600 bg-red-100";
-      default:
-        return "text-gray-600 bg-gray-100";
+  const clearWishlist = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, { wishlist: [] });
+      setWishlistProducts([]);
+      toast.success("Wishlist cleared");
+    } catch (error) {
+      console.error("Error clearing wishlist:", error);
+      toast.error("Failed to clear wishlist");
     }
   };
 
   if (!currentUser) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-grow container mx-auto px-4 pt-24 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-semibold mb-4">Please sign in to view your account</h1>
-            <Button onClick={() => navigate("/admin/sign-in")}>Sign In</Button>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
+    return null; // Navigate handles the redirect
   }
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-grow container mx-auto px-4 pt-24">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-2xl font-semibold">My Account</h1>
-            <Button variant="outline" onClick={() => signOut()}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-
-          <Tabs defaultValue="orders">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="orders">
-                <Package className="h-4 w-4 mr-2" />
-                My Orders
-              </TabsTrigger>
-              <TabsTrigger value="account">
-                <User className="h-4 w-4 mr-2" />
-                Account Details
-              </TabsTrigger>
-            </TabsList>
+      <main className="flex-grow pt-24 pb-16">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Sidebar */}
+            <div className="w-full md:w-64 space-y-2">
+              <Button
+                variant={activeTab === "profile" ? "default" : "outline"}
+                className="w-full justify-start"
+                onClick={() => setActiveTab("profile")}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Button>
+              <Button
+                variant={activeTab === "orders" ? "default" : "outline"}
+                className="w-full justify-start"
+                onClick={() => setActiveTab("orders")}
+              >
+                <Package className="mr-2 h-4 w-4" />
+                Orders
+              </Button>
+              <Button
+                variant={activeTab === "wishlist" ? "default" : "outline"}
+                className="w-full justify-start"
+                onClick={() => setActiveTab("wishlist")}
+              >
+                <Heart className="mr-2 h-4 w-4" />
+                Wishlist
+              </Button>
+              <Button
+                variant={activeTab === "payment" ? "default" : "outline"}
+                className="w-full justify-start"
+                onClick={() => setActiveTab("payment")}
+              >
+                <CreditCard className="mr-2 h-4 w-4" />
+                Payment Methods
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start text-destructive hover:text-destructive"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            </div>
             
-            <TabsContent value="orders" className="space-y-4 mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Order History</CardTitle>
-                  <CardDescription>View and track all your orders</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="flex justify-center py-12">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            {/* Content */}
+            <div className="flex-1 bg-white p-6 rounded-lg shadow-sm border">
+              {activeTab === "profile" && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-4">My Profile</h2>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-primary text-primary-foreground h-16 w-16 rounded-full flex items-center justify-center text-2xl font-semibold">
+                        {currentUser.displayName?.charAt(0) || currentUser.email?.charAt(0) || "U"}
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-lg">
+                          {currentUser.displayName || "User"}
+                        </h3>
+                        <p className="text-muted-foreground">{currentUser.email}</p>
+                      </div>
                     </div>
-                  ) : orders.length === 0 ? (
-                    <div className="text-center py-12">
-                      <ShoppingBag className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-lg font-medium mb-2">No orders yet</h3>
-                      <p className="text-muted-foreground mb-4">
-                        You haven't placed any orders yet.
+                    
+                    <div className="pt-4 border-t">
+                      <h3 className="font-medium mb-2">Account Information</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Manage your account details and preferences
                       </p>
-                      <Button onClick={() => navigate("/products")}>
-                        Start Shopping
-                      </Button>
+                      
+                      <form className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Name</label>
+                          <input 
+                            type="text" 
+                            className="w-full p-2 border rounded" 
+                            value={currentUser.displayName || ""} 
+                            readOnly 
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Email</label>
+                          <input 
+                            type="email" 
+                            className="w-full p-2 border rounded" 
+                            value={currentUser.email || ""} 
+                            readOnly 
+                          />
+                        </div>
+                        <Button type="button" variant="outline">
+                          Edit Profile
+                        </Button>
+                      </form>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {orders.map((order) => (
-                        <div 
-                          key={order.id} 
-                          className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(order.status)}
-                              <h3 className="font-medium">Order #{order.id.slice(0, 8)}...</h3>
-                            </div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                              {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                            </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4 text-sm mb-2">
-                            <div>
-                              <p className="text-muted-foreground">Order Date</p>
-                              <p>{format(new Date(order.createdAt), 'PPP')}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Total Amount</p>
-                              <p>${order.totalAmount.toFixed(2)}</p>
-                            </div>
-                          </div>
-                          
-                          <div className="text-sm text-muted-foreground mb-3">
-                            {getOrderStatusText(order.status)}
-                          </div>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex -space-x-2">
-                              {order.items.slice(0, 3).map((item, index) => (
-                                <div 
-                                  key={index} 
-                                  className="w-8 h-8 rounded-full overflow-hidden border-2 border-white"
-                                >
-                                  <img 
-                                    src={item.image} 
-                                    alt={item.title} 
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              ))}
-                              {order.items.length > 3 && (
-                                <div className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-xs">
-                                  +{order.items.length - 3}
-                                </div>
-                              )}
-                            </div>
-                            
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => viewOrderDetails(order)}
-                            >
-                              View Details
-                              <ChevronRight className="h-4 w-4 ml-1" />
-                            </Button>
-                          </div>
+                  </div>
+                </div>
+              )}
+              
+              {activeTab === "orders" && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-6">My Orders</h2>
+                  <div className="text-center py-8 border rounded-md">
+                    <p className="text-muted-foreground">You haven't placed any orders yet</p>
+                    <Button className="mt-4" onClick={() => navigate("/products")}>
+                      Browse Products
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {activeTab === "wishlist" && (
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold">My Wishlist</h2>
+                    {wishlistProducts.length > 0 && (
+                      <Button variant="outline" size="sm" onClick={clearWishlist}>
+                        Clear Wishlist
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="animate-pulse">
+                          <div className="bg-gray-200 aspect-square rounded-lg mb-2" />
+                          <div className="bg-gray-200 h-4 w-3/4 rounded mb-2" />
+                          <div className="bg-gray-200 h-4 w-1/4 rounded" />
                         </div>
                       ))}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="account" className="space-y-4 mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Account Information</CardTitle>
-                  <CardDescription>Manage your account details</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="email" className="block text-sm font-medium text-muted-foreground mb-1">
-                        Email Address
-                      </label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={currentUser?.email || ""}
-                        disabled
-                      />
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button 
-                        className="w-full"
-                        variant="outline"
-                        onClick={() => {
-                          toast.info("Password reset feature is coming soon!");
-                        }}
-                      >
-                        Change Password
+                  ) : wishlistProducts.length === 0 ? (
+                    <div className="text-center py-8 border rounded-md">
+                      <p className="text-muted-foreground">Your wishlist is empty</p>
+                      <Button className="mt-4" onClick={() => navigate("/products")}>
+                        Browse Products
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </main>
-
-      <Footer />
-
-      {/* Order Details Dialog */}
-      <Dialog open={orderDetailsOpen} onOpenChange={setOrderDetailsOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Order Details</DialogTitle>
-          </DialogHeader>
-          
-          {selectedOrder && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Order Information</h3>
-                  <p className="font-medium">Order ID: {selectedOrder.id}</p>
-                  <p>Date: {format(new Date(selectedOrder.createdAt), 'PPP')}</p>
-                  <p>Status: 
-                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
-                      {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}
-                    </span>
-                  </p>
-                  <p>Payment Method: {selectedOrder.paymentMethod}</p>
-                  {selectedOrder.couponCode && (
-                    <p>Coupon: {selectedOrder.couponCode} 
-                      {selectedOrder.discountAmount && 
-                        <span className="text-green-600 ml-1">(-${selectedOrder.discountAmount.toFixed(2)})</span>
-                      }
-                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {wishlistProducts.map((product) => (
+                        <ProductCard 
+                          key={product.id}
+                          id={product.id}
+                          title={product.title}
+                          price={product.price}
+                          image={product.image}
+                          category={product.category}
+                        />
+                      ))}
+                    </div>
                   )}
                 </div>
+              )}
+              
+              {activeTab === "payment" && (
                 <div>
-                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Shipping Information</h3>
-                  <p>Name: {selectedOrder.shippingAddress.name}</p>
-                  <p>Address: {selectedOrder.shippingAddress.address}</p>
-                  <p>City: {selectedOrder.shippingAddress.city}</p>
-                  <p>Postal Code: {selectedOrder.shippingAddress.postalCode}</p>
-                  <p>Country: {selectedOrder.shippingAddress.country}</p>
-                </div>
-              </div>
-              
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground mb-2">Order Items</h3>
-                <div className="border rounded-md divide-y">
-                  {selectedOrder.items.map((item) => (
-                    <div key={item.id} className="flex items-center p-3">
-                      <div className="w-16 h-16 flex-shrink-0">
-                        <img 
-                          src={item.image} 
-                          alt={item.title} 
-                          className="w-full h-full object-cover rounded"
-                        />
-                      </div>
-                      <div className="ml-4 flex-grow">
-                        <p className="font-medium">{item.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          ${item.price.toFixed(2)} × {item.quantity}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="border-t pt-4">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>${selectedOrder.totalAmount.toFixed(2)}</span>
-                </div>
-                {selectedOrder.discountAmount && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount</span>
-                    <span>-${selectedOrder.discountAmount.toFixed(2)}</span>
+                  <h2 className="text-2xl font-semibold mb-6">Payment Methods</h2>
+                  <div className="text-center py-8 border rounded-md">
+                    <p className="text-muted-foreground">No payment methods saved</p>
+                    <Button className="mt-4">
+                      Add Payment Method
+                    </Button>
                   </div>
-                )}
-                <div className="flex justify-between font-bold text-lg mt-2">
-                  <span>Total</span>
-                  <span>${(selectedOrder.totalAmount - (selectedOrder.discountAmount || 0)).toFixed(2)}</span>
                 </div>
-              </div>
-              
-              <div className="flex justify-end space-x-4">
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    toast.info("Printing feature coming soon!");
-                  }}
-                >
-                  Print Order
-                </Button>
-                <Button onClick={() => setOrderDetailsOpen(false)}>
-                  Close
-                </Button>
-              </div>
+              )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
     </div>
   );
 };

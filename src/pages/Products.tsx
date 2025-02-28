@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { ProductCard } from "@/components/ProductCard";
 import { Footer } from "@/components/Footer";
@@ -13,11 +13,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Filter, Search } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
+import { useLocation, useNavigate } from "react-router-dom";
 
 type SortOption = "price-asc" | "price-desc" | "name-asc" | "name-desc";
 
 const Products = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryParams = new URLSearchParams(location.search);
+  const categoryParam = queryParams.get('category');
+  
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || "all");
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -25,6 +31,24 @@ const Products = () => {
 
   // Extract all unique categories from products
   const allCategories = products ? [...new Set(products.map(product => product.category))] : [];
+
+  // Update URL when category changes
+  useEffect(() => {
+    if (selectedCategory === "all") {
+      navigate("/products", { replace: true });
+    } else {
+      navigate(`/products?category=${selectedCategory}`, { replace: true });
+    }
+  }, [selectedCategory, navigate]);
+
+  // Update selected category if URL param changes
+  useEffect(() => {
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    } else {
+      setSelectedCategory("all");
+    }
+  }, [categoryParam]);
 
   // Filter products based on search query and selected category
   const filteredProducts = products.filter(product => {
@@ -60,7 +84,11 @@ const Products = () => {
       <main className="flex-grow pt-24">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-semibold">All Products</h1>
+            <h1 className="text-3xl font-semibold">
+              {selectedCategory !== "all" 
+                ? `${selectedCategory} Products` 
+                : "All Products"}
+            </h1>
           </div>
 
           <div className="flex flex-col md:flex-row gap-6 mb-8">
@@ -151,6 +179,8 @@ const Products = () => {
                   title={product.title}
                   price={product.price}
                   image={product.image}
+                  category={product.category}
+                  featured={product.featured}
                 />
               ))}
             </div>

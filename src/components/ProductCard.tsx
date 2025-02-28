@@ -4,6 +4,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Heart, Eye } from "lucide-react";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
 interface ProductCardProps {
@@ -17,7 +20,31 @@ interface ProductCardProps {
 
 export const ProductCard = ({ id, title, price, image, category, featured }: ProductCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [isInWishlist, setIsInWishlist] = useState(false);
   const { addToCart } = useCart();
+  const { currentUser } = useAuth();
+
+  // Check if product is in wishlist
+  useState(() => {
+    const checkWishlist = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const userRef = doc(db, "users", currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+          const userData = userSnap.data();
+          const wishlist = userData.wishlist || [];
+          setIsInWishlist(wishlist.includes(id));
+        }
+      } catch (error) {
+        console.error("Error checking wishlist:", error);
+      }
+    };
+    
+    checkWishlist();
+  });
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -34,10 +61,37 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
     toast.success("Added to cart");
   };
   
-  const handleWishlist = (e: React.MouseEvent) => {
+  const handleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toast.success("Added to wishlist");
+    
+    if (!currentUser) {
+      toast.error("Please sign in to add items to your wishlist");
+      return;
+    }
+    
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      
+      if (isInWishlist) {
+        // Remove from wishlist
+        await updateDoc(userRef, {
+          wishlist: arrayRemove(id)
+        });
+        setIsInWishlist(false);
+        toast.success("Removed from wishlist");
+      } else {
+        // Add to wishlist
+        await updateDoc(userRef, {
+          wishlist: arrayUnion(id)
+        });
+        setIsInWishlist(true);
+        toast.success("Added to wishlist");
+      }
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      toast.error("Failed to update wishlist");
+    }
   };
   
   const handleQuickView = (e: React.MouseEvent) => {
@@ -80,11 +134,11 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
         }`}>
           <Button 
             size="icon" 
-            variant="secondary" 
-            className="h-8 w-8 bg-white hover:bg-primary hover:text-white transition-colors shadow-sm"
+            variant={isInWishlist ? "default" : "secondary"}
+            className={`h-8 w-8 ${isInWishlist ? 'bg-red-500 hover:bg-red-600' : 'bg-white hover:bg-primary hover:text-white'} transition-colors shadow-sm`}
             onClick={handleWishlist}
           >
-            <Heart className="h-4 w-4" />
+            <Heart className={`h-4 w-4 ${isInWishlist ? 'fill-white' : ''}`} />
           </Button>
           <Button 
             size="sm" 
