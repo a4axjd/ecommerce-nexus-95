@@ -15,6 +15,7 @@ interface PaymentFormProps {
 export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
+  const [formSubmitted, setFormSubmitted] = useState(false);
   
   // For manual card input form
   const [cardInfo, setCardInfo] = useState({
@@ -64,6 +65,12 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
   const handleCardSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
+    // Prevent duplicate submissions
+    if (formSubmitted || isLoading) {
+      console.log("Preventing duplicate submission - form already submitted");
+      return;
+    }
+    
     // Validate inputs (simple validation for demo)
     if (!cardInfo.number || !cardInfo.expiry || !cardInfo.cvc || !cardInfo.name) {
       toast.error("Please fill in all card details");
@@ -71,29 +78,55 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
     }
     
     setIsLoading(true);
+    setFormSubmitted(true);
     toast.info("Processing payment...");
     
-    // Simulate processing (in a real app this would be handled by PayPal's SDK)
-    setTimeout(() => {
-      toast.success("Payment successful");
+    try {
+      // Simulate processing (in a real app this would be handled by a payment processor)
+      setTimeout(() => {
+        toast.success("Payment successful");
+        setIsLoading(false);
+        onSuccess();
+      }, 2000);
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Payment failed. Please try again.");
       setIsLoading(false);
-      onSuccess();
-    }, 2000);
+      setFormSubmitted(false); // Reset to allow retry
+    }
   };
 
   const handlePayPalApprove = (data: any, actions: any) => {
+    // Prevent duplicate submissions
+    if (formSubmitted) {
+      console.log("Preventing duplicate PayPal submission - already processed");
+      return Promise.resolve();
+    }
+    
     // This is called when the PayPal payment is approved
     toast.info("Processing PayPal payment...");
+    setFormSubmitted(true);
     
-    // In a real implementation, you would verify the payment with your backend
-    // For demo, we're just simulating a successful payment
-    setTimeout(() => {
-      toast.success("PayPal payment successful");
-      onSuccess();
-    }, 1500);
+    try {
+      // In a real implementation, you would verify the payment with your backend
+      // For demo, we're just simulating a successful payment
+      setTimeout(() => {
+        toast.success("PayPal payment successful");
+        onSuccess();
+      }, 1500);
+    } catch (error) {
+      console.error("PayPal payment error:", error);
+      toast.error("PayPal payment failed. Please try again.");
+      setFormSubmitted(false); // Reset to allow retry
+    }
 
     return Promise.resolve();
   };
+
+  // Reset form submitted state when payment method changes
+  useEffect(() => {
+    setFormSubmitted(false);
+  }, [paymentMethod]);
 
   return (
     <Tabs defaultValue="card" onValueChange={(value) => setPaymentMethod(value as "card" | "paypal")}>
@@ -125,6 +158,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                 value={cardInfo.name}
                 onChange={handleCardInputChange}
                 required
+                disabled={formSubmitted || isLoading}
               />
             </div>
             
@@ -139,6 +173,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                 value={cardInfo.number}
                 onChange={handleCardInputChange}
                 required
+                disabled={formSubmitted || isLoading}
               />
             </div>
             
@@ -154,6 +189,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                   value={cardInfo.expiry}
                   onChange={handleCardInputChange}
                   required
+                  disabled={formSubmitted || isLoading}
                 />
               </div>
               
@@ -169,6 +205,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                   value={cardInfo.cvc}
                   onChange={handleCardInputChange}
                   required
+                  disabled={formSubmitted || isLoading}
                 />
               </div>
             </div>
@@ -181,7 +218,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isLoading}
+            disabled={isLoading || formSubmitted}
           >
             <CreditCard className="w-4 h-4 mr-2" />
             {isLoading ? "Processing..." : `Pay $${amount.toFixed(2)}`}
@@ -191,30 +228,45 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
 
       <TabsContent value="paypal">
         <PayPalScriptProvider options={{ 
-          clientId: "ARkPW5-IHUgervnUw1eF3414X9OLy2iejt8ObwBmqG2f9pK7c0CSCsNVXt_NFc00OOPfXNoF4rWbA0Fc", // Replace with your PayPal client ID in production
+          clientId: "AZLbo88PLuakr0L4eyq_gPT0Yk24QFWrw4GIJbSD9UfUF9xtC5jGm8Qe9lSZUPIyKKgdSLSKLa1BqLYB", // Updated PayPal client ID
           currency: "USD",
           intent: "capture"
         }}>
-          <PayPalButtons
-            style={{ layout: "vertical", shape: "rect" }}
-            createOrder={(data, actions) => {
-              return actions.order.create({
-                intent: "CAPTURE",
-                purchase_units: [
-                  {
-                    amount: {
-                      value: amount.toString(),
-                      currency_code: "USD"
+          {!formSubmitted && (
+            <PayPalButtons
+              style={{ layout: "vertical", shape: "rect" }}
+              createOrder={(data, actions) => {
+                if (formSubmitted) {
+                  console.log("Preventing duplicate PayPal order creation");
+                  return Promise.reject("Order already in progress");
+                }
+                
+                return actions.order.create({
+                  intent: "CAPTURE",
+                  purchase_units: [
+                    {
+                      amount: {
+                        value: amount.toString(),
+                        currency_code: "USD"
+                      }
                     }
-                  }
-                ]
-              });
-            }}
-            onApprove={handlePayPalApprove}
-            onError={() => {
-              toast.error("PayPal payment failed");
-            }}
-          />
+                  ]
+                });
+              }}
+              onApprove={handlePayPalApprove}
+              onError={(err) => {
+                console.error("PayPal error:", err);
+                toast.error("PayPal payment failed");
+                setFormSubmitted(false); // Reset to allow retry
+              }}
+              disabled={formSubmitted}
+            />
+          )}
+          {formSubmitted && (
+            <div className="p-4 text-center text-muted-foreground">
+              Processing your payment...
+            </div>
+          )}
           <p className="text-xs text-muted-foreground mt-3 text-center">
             You'll be redirected to PayPal to complete your purchase securely.
           </p>

@@ -129,7 +129,7 @@ const OrdersAdmin = () => {
     toast.success("Orders refreshed");
   };
 
-  // Format date with time
+  // Format date with exact time
   const formatDateTime = (timestamp: number) => {
     return format(new Date(timestamp), 'MMM dd, yyyy HH:mm:ss');
   };
