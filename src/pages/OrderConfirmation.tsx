@@ -56,7 +56,19 @@ const OrderConfirmation = () => {
           return;
         }
 
-        // Create the order
+        // Prepare shipping address with proper field names
+        const shippingAddress = {
+          name: orderDetails.shippingAddress.name,
+          address: orderDetails.shippingAddress.address,
+          city: orderDetails.shippingAddress.city,
+          state: orderDetails.shippingAddress.state || "",
+          postalCode: orderDetails.shippingAddress.zipCode, // Convert zipCode to postalCode
+          country: orderDetails.shippingAddress.country,
+          email: orderDetails.shippingAddress.email,
+          phone: orderDetails.shippingAddress.phone
+        };
+
+        // Create the order with correct data structure
         const orderData = {
           userId: currentUser.uid,
           items: cartState.items.map(item => ({
@@ -67,9 +79,9 @@ const OrderConfirmation = () => {
             quantity: item.quantity,
             image: item.image
           })),
-          totalAmount: cartState.total,
+          totalAmount: orderDetails.total || cartState.total, // Use the total from orderDetails if available
           status: 'pending' as const,
-          shippingAddress: orderDetails.shippingAddress,
+          shippingAddress: shippingAddress,
           paymentMethod: orderDetails.paymentMethod,
           createdAt: Date.now(),
           updatedAt: Date.now(),
@@ -178,7 +190,7 @@ const OrderConfirmation = () => {
                   <span className="font-medium">Shipping Address:</span><br />
                   {orderDetails.shippingAddress.name}<br />
                   {orderDetails.shippingAddress.address}<br />
-                  {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.postalCode}<br />
+                  {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state || ""} {orderDetails.shippingAddress.zipCode}<br />
                   {orderDetails.shippingAddress.country}
                 </p>
                 <p>
@@ -187,7 +199,7 @@ const OrderConfirmation = () => {
                   {orderDetails.shippingAddress.phone && <span>Phone: {orderDetails.shippingAddress.phone}</span>}
                 </p>
                 <p><span className="font-medium">Payment Method:</span> {orderDetails.paymentMethod}</p>
-                <p className="font-semibold">Total: ${cartState.total.toFixed(2)}</p>
+                <p className="font-semibold">Total: ${(orderDetails.total || cartState.total).toFixed(2)}</p>
               </div>
             </div>
             
