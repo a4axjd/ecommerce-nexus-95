@@ -71,7 +71,7 @@ const Index = () => {
       
       <main className="flex-grow">
         {/* Hero Section with Carousel */}
-        <section className="relative h-[80vh]">
+        <section className="relative h-screen max-h-[900px] min-h-[600px]">
           <Carousel className="w-full h-full">
             <CarouselContent className="h-full">
               {HERO_SLIDES.map((slide, index) => (
@@ -81,20 +81,20 @@ const Index = () => {
                       className="absolute inset-0 bg-cover bg-center"
                       style={{ backgroundImage: `url(${slide.image})` }}
                     >
-                      <div className="absolute inset-0 bg-black/40" />
+                      <div className="absolute inset-0 bg-black/30" />
                     </div>
                     
                     <div className="container mx-auto px-4 text-center relative z-10">
-                      <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white animate-fade-in">
+                      <h1 className="text-5xl md:text-7xl font-bold mb-8 text-white animate-fade-in">
                         {slide.title}
                       </h1>
-                      <p className="text-lg md:text-xl text-gray-100 mb-8 animate-fade-in">
+                      <p className="text-xl md:text-2xl text-gray-100 mb-10 max-w-3xl mx-auto animate-fade-in">
                         {slide.subtitle}
                       </p>
                       <Link to={slide.buttonLink}>
-                        <Button size="lg" className="animate-slide-in group">
+                        <Button size="lg" className="animate-slide-in text-lg px-8 py-6 h-auto font-semibold group">
                           {slide.buttonText}
-                          <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                          <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                         </Button>
                       </Link>
                     </div>
@@ -102,8 +102,8 @@ const Index = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="left-4 lg:left-8" />
-            <CarouselNext className="right-4 lg:right-8" />
+            <CarouselPrevious className="left-6 lg:left-10 h-12 w-12" />
+            <CarouselNext className="right-6 lg:right-10 h-12 w-12" />
           </Carousel>
         </section>
 
