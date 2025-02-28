@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CreditCard } from "lucide-react";
@@ -26,10 +26,39 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
 
   const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setCardInfo(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Format card number with spaces after every 4 digits
+    if (name === "number") {
+      const formattedValue = value
+        .replace(/\s/g, '') // Remove all spaces
+        .match(/.{1,4}/g)?.join(' ') || ''; // Add a space after every 4 characters
+      
+      setCardInfo(prev => ({
+        ...prev,
+        [name]: formattedValue.substring(0, 19) // Limit to 16 digits + 3 spaces
+      }));
+    }
+    // Format expiry date with a slash
+    else if (name === "expiry") {
+      let formattedValue = value.replace(/\//g, ''); // Remove any existing slashes
+      
+      // If length is > 2, insert slash after the first 2 characters
+      if (formattedValue.length > 2) {
+        formattedValue = `${formattedValue.substring(0, 2)}/${formattedValue.substring(2)}`;
+      }
+      
+      setCardInfo(prev => ({
+        ...prev,
+        [name]: formattedValue.substring(0, 5) // Limit to MM/YY format
+      }));
+    }
+    // For other fields, just set the value
+    else {
+      setCardInfo(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleCardSubmit = async (event: React.FormEvent) => {
@@ -107,7 +136,6 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                 id="card-number"
                 name="number"
                 placeholder="4111 1111 1111 1111"
-                maxLength={19}
                 value={cardInfo.number}
                 onChange={handleCardInputChange}
                 required
@@ -123,7 +151,6 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
                   id="card-expiry"
                   name="expiry"
                   placeholder="MM/YY"
-                  maxLength={5}
                   value={cardInfo.expiry}
                   onChange={handleCardInputChange}
                   required

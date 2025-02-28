@@ -48,6 +48,7 @@ const OrderConfirmation = () => {
         }
 
         console.log("Preparing to create order with items:", cartState.items);
+        console.log("Order details:", orderDetails);
         
         if (cartState.items.length === 0) {
           console.error("No items in cart");
@@ -62,7 +63,7 @@ const OrderConfirmation = () => {
           address: orderDetails.shippingAddress.address,
           city: orderDetails.shippingAddress.city,
           state: orderDetails.shippingAddress.state || "",
-          postalCode: orderDetails.shippingAddress.zipCode, // Convert zipCode to postalCode
+          postalCode: orderDetails.shippingAddress.zipCode || "", // Convert zipCode to postalCode
           country: orderDetails.shippingAddress.country,
           email: orderDetails.shippingAddress.email,
           phone: orderDetails.shippingAddress.phone
@@ -79,17 +80,17 @@ const OrderConfirmation = () => {
             quantity: item.quantity,
             image: item.image
           })),
-          totalAmount: orderDetails.total || cartState.total, // Use the total from orderDetails if available
+          totalAmount: Number(orderDetails.total || cartState.total), // Ensure it's a number
           status: 'pending' as const,
           shippingAddress: shippingAddress,
           paymentMethod: orderDetails.paymentMethod,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           couponCode: orderDetails.couponCode,
-          discountAmount: orderDetails.discount
+          discountAmount: orderDetails.discount ? Number(orderDetails.discount) : 0 // Ensure it's a number
         };
 
-        console.log("Creating order with data:", orderData);
+        console.log("Creating order with data:", JSON.stringify(orderData));
         
         // Try to save the user's email to their profile for future reference
         if (orderDetails.shippingAddress.email && currentUser) {
@@ -150,7 +151,12 @@ const OrderConfirmation = () => {
         setIsProcessing(false);
       } catch (error) {
         console.error("Error creating order:", error);
-        toast.error("Failed to create order. Please try again.");
+        // More detailed error message
+        if (error instanceof Error) {
+          toast.error(`Failed to create order: ${error.message}`);
+        } else {
+          toast.error("Failed to create order. Please try again.");
+        }
         setIsProcessing(false);
       }
     };
@@ -190,7 +196,7 @@ const OrderConfirmation = () => {
                   <span className="font-medium">Shipping Address:</span><br />
                   {orderDetails.shippingAddress.name}<br />
                   {orderDetails.shippingAddress.address}<br />
-                  {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state || ""} {orderDetails.shippingAddress.zipCode}<br />
+                  {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.state || ""} {orderDetails.shippingAddress.zipCode || ""}<br />
                   {orderDetails.shippingAddress.country}
                 </p>
                 <p>
@@ -199,7 +205,7 @@ const OrderConfirmation = () => {
                   {orderDetails.shippingAddress.phone && <span>Phone: {orderDetails.shippingAddress.phone}</span>}
                 </p>
                 <p><span className="font-medium">Payment Method:</span> {orderDetails.paymentMethod}</p>
-                <p className="font-semibold">Total: ${(orderDetails.total || cartState.total).toFixed(2)}</p>
+                <p className="font-semibold">Total: ${(Number(orderDetails.total) || cartState.total).toFixed(2)}</p>
               </div>
             </div>
             
