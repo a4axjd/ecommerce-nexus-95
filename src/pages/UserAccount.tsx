@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { useAuth } from "@/context/AuthContext";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { ProductCard } from "@/components/ProductCard";
 import { toast } from "sonner";
@@ -20,7 +20,7 @@ interface WishlistProduct {
 }
 
 const UserAccount = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [wishlistProducts, setWishlistProducts] = useState<WishlistProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,31 +39,41 @@ const UserAccount = () => {
         const userRef = doc(db, "users", currentUser.uid);
         const userSnap = await getDoc(userRef);
         
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          const wishlistIds = userData.wishlist || [];
-          
-          // Fetch product details for each ID in wishlist
-          const productsData: WishlistProduct[] = [];
-          
-          for (const productId of wishlistIds) {
-            const productRef = doc(db, "products", productId);
-            const productSnap = await getDoc(productRef);
-            
-            if (productSnap.exists()) {
-              const productData = productSnap.data();
-              productsData.push({
-                id: productId,
-                title: productData.title,
-                price: productData.price,
-                image: productData.image,
-                category: productData.category
-              });
-            }
-          }
-          
-          setWishlistProducts(productsData);
+        // Create user document if it doesn't exist
+        if (!userSnap.exists()) {
+          await setDoc(userRef, {
+            email: currentUser.email,
+            displayName: currentUser.displayName,
+            wishlist: []
+          });
+          setWishlistProducts([]);
+          setIsLoading(false);
+          return;
         }
+        
+        const userData = userSnap.data();
+        const wishlistIds = userData.wishlist || [];
+        
+        // Fetch product details for each ID in wishlist
+        const productsData: WishlistProduct[] = [];
+        
+        for (const productId of wishlistIds) {
+          const productRef = doc(db, "products", productId);
+          const productSnap = await getDoc(productRef);
+          
+          if (productSnap.exists()) {
+            const productData = productSnap.data();
+            productsData.push({
+              id: productId,
+              title: productData.title,
+              price: productData.price,
+              image: productData.image,
+              category: productData.category
+            });
+          }
+        }
+        
+        setWishlistProducts(productsData);
       } catch (error) {
         console.error("Error fetching wishlist:", error);
         toast.error("Failed to load wishlist");
@@ -77,7 +87,7 @@ const UserAccount = () => {
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await signOut();
       navigate("/");
       toast.success("Logged out successfully");
     } catch (error) {

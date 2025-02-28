@@ -5,7 +5,7 @@ import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useProducts, Product } from "@/hooks/useProducts";
-import { Pencil, Trash, Star } from "lucide-react";
+import { Pencil, Trash, Star, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { AdminSidebar } from "@/components/AdminSidebar";
 
@@ -19,8 +19,8 @@ const Admin = () => {
     price: "",
     category: "",
     image: "",
+    additionalImages: [""],
     featured: false,
-    // New fields
     shippingInfo: "",
     returnPolicy: "",
   });
@@ -33,6 +33,28 @@ const Admin = () => {
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: checked }));
+  };
+
+  const handleAdditionalImageChange = (index: number, value: string) => {
+    const newAdditionalImages = [...formData.additionalImages];
+    newAdditionalImages[index] = value;
+    setFormData(prev => ({ ...prev, additionalImages: newAdditionalImages }));
+  };
+
+  const addImageField = () => {
+    setFormData(prev => ({
+      ...prev,
+      additionalImages: [...prev.additionalImages, ""]
+    }));
+  };
+
+  const removeImageField = (index: number) => {
+    const newAdditionalImages = [...formData.additionalImages];
+    newAdditionalImages.splice(index, 1);
+    setFormData(prev => ({
+      ...prev,
+      additionalImages: newAdditionalImages
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,13 +71,17 @@ const Admin = () => {
     try {
       console.log("Starting product submission...");
       
-      // Prepare the product data with direct image URL
+      // Filter out empty image URLs
+      const filteredAdditionalImages = formData.additionalImages.filter(url => url.trim() !== "");
+      
+      // Prepare the product data with direct image URL and additional images
       const productData = {
         title: formData.title,
         description: formData.description,
         price: parseFloat(formData.price),
         category: formData.category,
         image: formData.image,
+        images: [formData.image, ...filteredAdditionalImages], // Include main image and additional images
         featured: formData.featured,
         shippingInfo: formData.shippingInfo,
         returnPolicy: formData.returnPolicy,
@@ -89,6 +115,7 @@ const Admin = () => {
         price: "",
         category: "",
         image: "",
+        additionalImages: [""],
         featured: false,
         shippingInfo: "",
         returnPolicy: "",
@@ -117,6 +144,10 @@ const Admin = () => {
       price: product.price.toString(),
       category: product.category,
       image: product.image,
+      additionalImages: product.images ? 
+        // Filter out the main image from the images array
+        product.images.filter(img => img !== product.image) : 
+        [""],
       featured: product.featured || false,
       shippingInfo: product.shippingInfo || "",
       returnPolicy: product.returnPolicy || "",
@@ -211,7 +242,7 @@ const Admin = () => {
 
                 <div>
                   <label htmlFor="image" className="block text-sm font-medium mb-1">
-                    Image URL
+                    Main Image URL
                   </label>
                   <Input
                     type="url"
@@ -222,6 +253,46 @@ const Admin = () => {
                     placeholder="https://example.com/image.jpg"
                     required
                   />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium">
+                      Additional Images
+                    </label>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm"
+                      onClick={addImageField}
+                      className="text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add Image
+                    </Button>
+                  </div>
+                  
+                  {formData.additionalImages.map((imageUrl, index) => (
+                    <div key={index} className="flex items-center gap-2 mb-2">
+                      <Input
+                        type="url"
+                        value={imageUrl}
+                        onChange={(e) => handleAdditionalImageChange(index, e.target.value)}
+                        placeholder={`Additional image URL ${index + 1}`}
+                        className="flex-1"
+                      />
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        size="icon"
+                        onClick={() => removeImageField(index)}
+                        disabled={formData.additionalImages.length === 1 && index === 0}
+                        className="h-10 w-10 shrink-0"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
 
                 <div>
@@ -287,6 +358,7 @@ const Admin = () => {
                           price: "",
                           category: "",
                           image: "",
+                          additionalImages: [""],
                           featured: false,
                           shippingInfo: "",
                           returnPolicy: "",
@@ -319,6 +391,11 @@ const Admin = () => {
                         {product.featured && (
                           <div className="absolute -top-2 -right-2 bg-yellow-400 rounded-full p-1" title="Featured on home page">
                             <Star className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                        {product.images && product.images.length > 1 && (
+                          <div className="absolute -bottom-2 -right-2 bg-blue-500 text-white rounded-full text-xs w-5 h-5 flex items-center justify-center" title="Has additional images">
+                            {product.images.length}
                           </div>
                         )}
                       </div>

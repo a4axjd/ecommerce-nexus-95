@@ -4,7 +4,6 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
 import { Minus, Plus, ShoppingBag, Tag, Clock, Check, ArrowRight, Heart, Star } from "lucide-react";
 import { toast } from "sonner";
@@ -23,7 +22,8 @@ import {
   updateDoc,
   arrayUnion,
   arrayRemove,
-  getDoc
+  getDoc,
+  setDoc
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -45,12 +45,20 @@ const ProductDetail = () => {
   const [newReview, setNewReview] = useState({ rating: 5, comment: "" });
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [averageRating, setAverageRating] = useState(0);
+  const [selectedImage, setSelectedImage] = useState("");
   const { addToCart } = useCart();
   const { currentUser } = useAuth();
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
   
   const { data: product, isLoading } = useProduct(id || "");
   const { data: allProducts = [] } = useProducts();
+  
+  // Set the selected image when product loads
+  useEffect(() => {
+    if (product) {
+      setSelectedImage(product.image);
+    }
+  }, [product]);
   
   // Track recently viewed products
   useEffect(() => {
@@ -140,6 +148,16 @@ const ProductDetail = () => {
     
     try {
       const userRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      
+      // Create user document if it doesn't exist
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          wishlist: []
+        });
+      }
       
       if (isInWishlist) {
         // Remove from wishlist
@@ -261,6 +279,9 @@ const ProductDetail = () => {
     toast.success("Added to cart");
   };
 
+  // Get the list of all images (main + additional)
+  const allImages = product.images || [product.image];
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -279,15 +300,38 @@ const ProductDetail = () => {
           {/* Product Detail */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
             {/* Product Image */}
-            <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100 shadow-md relative">
-              <img
-                src={product.image}
-                alt={product.title}
-                className="h-full w-full object-cover transition-transform hover:scale-105 duration-500"
-              />
-              {product.featured && (
-                <div className="absolute top-4 left-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium">
-                  Featured
+            <div className="space-y-4">
+              <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100 shadow-md relative">
+                <img
+                  src={selectedImage}
+                  alt={product.title}
+                  className="h-full w-full object-cover transition-transform hover:scale-105 duration-500"
+                />
+                {product.featured && (
+                  <div className="absolute top-4 left-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium">
+                    Featured
+                  </div>
+                )}
+              </div>
+              
+              {/* Thumbnail images */}
+              {allImages.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {allImages.map((img, index) => (
+                    <button
+                      key={index}
+                      className={`h-20 w-20 flex-shrink-0 rounded-md overflow-hidden border-2 ${
+                        selectedImage === img ? 'border-primary' : 'border-transparent'
+                      }`}
+                      onClick={() => setSelectedImage(img)}
+                    >
+                      <img 
+                        src={img} 
+                        alt={`${product.title} - image ${index + 1}`} 
+                        className="h-full w-full object-cover"
+                      />
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
@@ -551,16 +595,12 @@ const ProductDetail = () => {
               <div className="prose max-w-none">
                 <h3>Shipping Information</h3>
                 <p>
-                  We ship to locations worldwide. Shipping times and costs will vary based on location. 
-                  Standard shipping usually takes 3-7 business days within the continental United States.
+                  {product.shippingInfo || "We ship to locations worldwide. Shipping times and costs will vary based on location. Standard shipping usually takes 3-7 business days within the continental United States."}
                 </p>
                 
                 <h3 className="mt-6">Return Policy</h3>
                 <p>
-                  If you're not completely satisfied with your purchase, you may return it within 30 days 
-                  of receipt for a full refund of the item price. To be eligible for a return, your item must 
-                  be in the same condition that you received it, unworn or unused, with tags, and in its 
-                  original packaging.
+                  {product.returnPolicy || "If you're not completely satisfied with your purchase, you may return it within 30 days of receipt for a full refund of the item price. To be eligible for a return, your item must be in the same condition that you received it, unworn or unused, with tags, and in its original packaging."}
                 </p>
                 
                 <h4 className="mt-4">How to Return</h4>

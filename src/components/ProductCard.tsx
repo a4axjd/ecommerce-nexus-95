@@ -1,11 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Heart, Eye } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
-import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
 
@@ -25,7 +25,7 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
   const { currentUser } = useAuth();
 
   // Check if product is in wishlist
-  useState(() => {
+  useEffect(() => {
     const checkWishlist = async () => {
       if (!currentUser) return;
       
@@ -44,7 +44,7 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
     };
     
     checkWishlist();
-  });
+  }, [currentUser, id]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -72,6 +72,16 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
     
     try {
       const userRef = doc(db, "users", currentUser.uid);
+      const userSnap = await getDoc(userRef);
+      
+      // Create the user document if it doesn't exist
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          email: currentUser.email,
+          displayName: currentUser.displayName,
+          wishlist: []
+        });
+      }
       
       if (isInWishlist) {
         // Remove from wishlist
