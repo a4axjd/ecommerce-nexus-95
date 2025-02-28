@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -37,7 +36,7 @@ const Checkout = () => {
     city: "",
     state: "",
     zipCode: "",
-    country: "United States",
+    country: "Saudi Arabia",
     phone: "",
     email: "", // Add email field
   });
@@ -327,9 +326,9 @@ const Checkout = () => {
                       </label>
                       <Input
                         id="country"
-                        value={shippingInfo.country}
-                        onChange={(e) => setShippingInfo({...shippingInfo, country: e.target.value})}
-                        required
+                        value="Saudi Arabia"
+                        readOnly
+                        className="bg-gray-50"
                       />
                     </div>
                   </div>

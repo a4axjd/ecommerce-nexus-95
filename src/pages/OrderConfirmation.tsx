@@ -69,6 +69,12 @@ const OrderConfirmation = () => {
           phone: orderDetails.shippingAddress.phone
         };
 
+        // Handle couponCode properly - Firebase doesn't allow undefined values
+        let couponCode = null;
+        if (typeof orderDetails.couponCode === 'string' && orderDetails.couponCode.trim() !== '') {
+          couponCode = orderDetails.couponCode;
+        }
+
         // Create the order with correct data structure
         const orderData = {
           userId: currentUser.uid,
@@ -86,7 +92,8 @@ const OrderConfirmation = () => {
           paymentMethod: orderDetails.paymentMethod,
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          couponCode: orderDetails.couponCode,
+          // Only include couponCode if it has a valid value
+          ...(couponCode && { couponCode }),
           discountAmount: orderDetails.discount ? Number(orderDetails.discount) : 0 // Ensure it's a number
         };
 
