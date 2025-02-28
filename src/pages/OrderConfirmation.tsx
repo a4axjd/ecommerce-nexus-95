@@ -39,6 +39,7 @@ const OrderConfirmation = () => {
         
         // Create order items from cart items
         const orderItems = cartState.items.map(item => ({
+          id: `${item.id}-${Date.now()}`, // Generate a unique ID for each order item
           productId: item.id,
           title: item.title,
           price: item.price,

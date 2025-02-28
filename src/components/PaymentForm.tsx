@@ -298,11 +298,18 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
                       } : undefined
                     }
                   ],
+                  // Fix the payer structure to match PayPal API requirements
                   payer: shippingInfo ? {
                     email_address: shippingInfo.email,
+                    name: {
+                      given_name: shippingInfo.name.split(' ')[0],
+                      surname: shippingInfo.name.split(' ').slice(1).join(' ') || ''
+                    },
                     phone: {
+                      phone_type: "MOBILE",
                       phone_number: {
-                        national_number: shippingInfo.phone.replace(/\D/g, '')
+                        national_number: shippingInfo.phone.replace(/\D/g, ''),
+                        country_code: "966" // Saudi Arabia country code
                       }
                     }
                   } : undefined
