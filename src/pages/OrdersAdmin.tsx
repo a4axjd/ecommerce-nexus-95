@@ -129,6 +129,11 @@ const OrdersAdmin = () => {
     toast.success("Orders refreshed");
   };
 
+  // Format date with time
+  const formatDateTime = (timestamp: number) => {
+    return format(new Date(timestamp), 'MMM dd, yyyy HH:mm:ss');
+  };
+
   return (
     <div className="flex h-screen">
       <AdminSidebar />
@@ -206,7 +211,7 @@ const OrdersAdmin = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Order ID</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead>Date & Time</TableHead>
                         <TableHead>Customer</TableHead>
                         <TableHead>Contact</TableHead>
                         <TableHead>Total</TableHead>
@@ -218,7 +223,7 @@ const OrdersAdmin = () => {
                       {filteredOrders.map((order) => (
                         <TableRow key={order.id}>
                           <TableCell className="font-medium">{order.id.slice(0, 8)}...</TableCell>
-                          <TableCell>{format(new Date(order.createdAt), 'MMM dd, yyyy')}</TableCell>
+                          <TableCell>{formatDateTime(order.createdAt)}</TableCell>
                           <TableCell>{order.shippingAddress.name}</TableCell>
                           <TableCell>
                             {order.shippingAddress.email ? (
@@ -286,7 +291,7 @@ const OrdersAdmin = () => {
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground mb-1">Order Information</h3>
                   <p className="font-medium">Order ID: {selectedOrder.id}</p>
-                  <p>Date: {format(new Date(selectedOrder.createdAt), 'PPP')}</p>
+                  <p>Date: {formatDateTime(selectedOrder.createdAt)}</p>
                   <p>Status: 
                     <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedOrder.status)}`}>
                       {selectedOrder.status.charAt(0).toUpperCase() + selectedOrder.status.slice(1)}

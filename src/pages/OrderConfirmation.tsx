@@ -21,6 +21,7 @@ const OrderConfirmation = () => {
   const createOrder = useCreateOrder();
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(true);
+  const [orderProcessed, setOrderProcessed] = useState(false);
 
   // Get order details from location state
   const orderDetails = location.state?.orderDetails;
@@ -33,12 +34,15 @@ const OrderConfirmation = () => {
       return;
     }
 
-    // If we already created an order, don't create another one
-    if (orderId) return;
+    // If we already created an order or are currently processing, don't create another one
+    if (orderId || orderProcessed) return;
 
     const saveOrder = async () => {
+      if (orderProcessed) return; // Extra check to prevent duplicate processing
+      
       try {
         setIsProcessing(true);
+        setOrderProcessed(true); // Mark that we've started processing
         
         if (!currentUser) {
           console.error("User not logged in");
@@ -169,7 +173,7 @@ const OrderConfirmation = () => {
     };
 
     saveOrder();
-  }, [orderDetails, navigate, currentUser, cartState, clearCart, createOrder, orderId]);
+  }, [orderDetails, navigate, currentUser, cartState, clearCart, createOrder, orderId, orderProcessed]);
 
   if (!orderDetails && !orderId) {
     return null; // Will redirect in useEffect
