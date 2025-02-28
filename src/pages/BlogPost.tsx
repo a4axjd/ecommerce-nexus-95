@@ -1,78 +1,150 @@
 
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { useBlog, useBlogs } from "@/hooks/useBlogs";
 import { Button } from "@/components/ui/button";
-import { 
-  ArrowLeft, 
-  CalendarIcon, 
-  Clock, 
-  User, 
-  Tag, 
-  Share2, 
-  Bookmark, 
-  MessageSquare,
-  Twitter,
-  Facebook,
-  Linkedin
-} from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar, ChevronRight, MessageSquare, User } from "lucide-react";
+import { useBlog, useBlogs } from "@/hooks/useBlogs";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { collection, addDoc, serverTimestamp, query, where, orderBy, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+
+interface Comment {
+  id: string;
+  blogId: string;
+  userId: string;
+  userName: string;
+  content: string;
+  createdAt: any;
+}
 
 const BlogPost = () => {
   const { id } = useParams<{ id: string }>();
-  const { data: blog, isLoading, error } = useBlog(id || "");
-  const { data: allBlogs = [] } = useBlogs();
+  const { data: blog, isLoading } = useBlog(id);
+  const { data: blogs = [] } = useBlogs();
+  const { currentUser } = useAuth();
+  const [comment, setComment] = useState("");
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Get related blog posts (sharing tags with current blog)
-  const relatedBlogs = allBlogs
-    .filter(b => b.id !== id && b.tags.some(tag => blog?.tags.includes(tag)))
+  // Get related blogs (excluding the current one)
+  const relatedBlogs = blogs
+    .filter(b => b.id !== id)
+    .sort(() => 0.5 - Math.random())
     .slice(0, 3);
 
-  const formatDate = (timestamp: number) => {
-    if (!timestamp) return "";
-    return new Date(timestamp).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-  
-  const calculateReadTime = (content: string) => {
-    if (!content) return "";
-    const wordsPerMinute = 200;
-    const words = content.split(/\s+/).length;
-    const minutes = Math.ceil(words / wordsPerMinute);
-    return `${minutes} min read`;
+  // Fetch comments
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchComments = async () => {
+      try {
+        const q = query(
+          collection(db, "comments"),
+          where("blogId", "==", id),
+          orderBy("createdAt", "desc")
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const fetchedComments: Comment[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          fetchedComments.push({
+            id: doc.id,
+            ...doc.data()
+          } as Comment);
+        });
+        
+        setComments(fetchedComments);
+      } catch (error) {
+        console.error("Error fetching comments:", error);
+        toast.error("Failed to load comments");
+      }
+    };
+
+    fetchComments();
+  }, [id]);
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentUser) {
+      toast.error("Please sign in to leave a comment");
+      return;
+    }
+    
+    if (!comment.trim()) {
+      toast.error("Comment cannot be empty");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const commentData = {
+        blogId: id,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || currentUser.email?.split('@')[0] || "Anonymous",
+        content: comment,
+        createdAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(collection(db, "comments"), commentData);
+      
+      const newComment = {
+        id: docRef.id,
+        ...commentData,
+        createdAt: new Date()
+      };
+      
+      setComments(prevComments => [newComment, ...prevComments]);
+      setComment("");
+      toast.success("Comment added successfully");
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      toast.error("Failed to add comment");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-grow container mx-auto px-4 pt-24 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <main className="flex-grow pt-24">
+          <div className="container mx-auto px-4">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
+              <div className="aspect-video bg-gray-200 rounded mb-8"></div>
+              <div className="space-y-2 mb-4">
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+              </div>
+            </div>
+          </div>
         </main>
         <Footer />
       </div>
     );
   }
 
-  if (error || !blog) {
+  if (!blog) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-grow container mx-auto px-4 pt-24">
-          <div className="text-center">
+        <main className="flex-grow pt-24">
+          <div className="container mx-auto px-4 text-center">
             <h1 className="text-2xl font-bold mb-4">Blog post not found</h1>
-            <p className="text-muted-foreground mb-6">
-              The blog post you're looking for doesn't exist or has been removed.
-            </p>
+            <p className="mb-6">The blog post you're looking for doesn't exist or has been removed.</p>
             <Button asChild>
-              <Link to="/blogs">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Blogs
-              </Link>
+              <Link to="/blogs">Back to Blogs</Link>
             </Button>
           </div>
         </main>
@@ -85,181 +157,208 @@ const BlogPost = () => {
     <div className="min-h-screen flex flex-col">
       <Navbar />
       
-      <main className="flex-grow pt-24 pb-16">
+      <main className="flex-grow pt-24">
         <div className="container mx-auto px-4">
           {/* Breadcrumb */}
-          <div className="mb-6">
-            <Link to="/blogs" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to all articles
-            </Link>
+          <div className="text-sm text-muted-foreground mb-6">
+            <Link to="/" className="hover:text-primary">Home</Link>
+            <ChevronRight className="inline h-4 w-4 mx-1" />
+            <Link to="/blogs" className="hover:text-primary">Blog</Link>
+            <ChevronRight className="inline h-4 w-4 mx-1" />
+            <span>{blog.title}</span>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-12">
-            <div className="md:col-span-8">
-              <article className="max-w-3xl">
-                {/* Article header */}
-                <div className="mb-8">
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {blog.tags.map(tag => (
-                      <span 
-                        key={tag} 
-                        className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  
-                  <h1 className="text-3xl md:text-4xl font-bold mb-6">{blog.title}</h1>
-                  
-                  <div className="flex items-center gap-4 mb-6">
-                    <Avatar>
-                      <AvatarImage src={`https://ui-avatars.com/api/?name=${blog.author}&background=random`} />
-                      <AvatarFallback>{blog.author[0]}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-medium">{blog.author}</p>
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <CalendarIcon className="h-3 w-3" />
-                          {formatDate(blog.createdAt)}
-                        </div>
-                        <span>•</span>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {calculateReadTime(blog.content)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            {/* Main Content */}
+            <div className="lg:col-span-2">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">{blog.title}</h1>
+              
+              <div className="flex items-center text-sm text-muted-foreground mb-6">
+                <div className="flex items-center">
+                  <User className="h-4 w-4 mr-1" />
+                  <span>{blog.author}</span>
                 </div>
-                
-                {/* Hero image */}
-                <img 
-                  src={blog.imageUrl} 
-                  alt={blog.title} 
-                  className="w-full h-72 md:h-96 object-cover rounded-lg mb-8"
-                />
-                
-                {/* Article content */}
-                <div className="prose prose-lg max-w-none mb-10">
-                  {blog.content.split('\n\n').map((paragraph, index) => (
-                    <p key={index} className="mb-6">{paragraph}</p>
+                <div className="mx-2">•</div>
+                <div className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  <span>{new Date(blog.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="mx-2">•</div>
+                <div className="flex items-center">
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  <span>{comments.length} comments</span>
+                </div>
+              </div>
+              
+              {/* Featured Image */}
+              {blog.image && (
+                <div className="mb-8">
+                  <img 
+                    src={blog.image} 
+                    alt={blog.title} 
+                    className="w-full h-auto rounded-lg object-cover"
+                  />
+                </div>
+              )}
+              
+              {/* Blog Content */}
+              <div className="prose max-w-none mb-12">
+                <div dangerouslySetInnerHTML={{ __html: blog.content }} />
+              </div>
+              
+              {/* Tags */}
+              {blog.tags && blog.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-12">
+                  {blog.tags.map((tag, index) => (
+                    <span 
+                      key={index}
+                      className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm"
+                    >
+                      {tag}
+                    </span>
                   ))}
                 </div>
+              )}
+              
+              {/* Comments Section */}
+              <div className="border-t pt-12">
+                <h2 className="text-2xl font-semibold mb-6">Comments ({comments.length})</h2>
                 
-                {/* Tags */}
-                <div className="flex items-center flex-wrap gap-2 mb-8">
-                  <Tag className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Tags:</span>
-                  {blog.tags.map(tag => (
+                {/* Comment Form */}
+                <div className="mb-12">
+                  <h3 className="text-lg font-medium mb-4">Leave a Comment</h3>
+                  
+                  {currentUser ? (
+                    <form onSubmit={handleSubmitComment}>
+                      <Textarea
+                        placeholder="Write your comment here..."
+                        className="mb-4"
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        required
+                      />
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? "Submitting..." : "Post Comment"}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="bg-secondary p-4 rounded-lg">
+                      <p className="mb-4">Please sign in to leave a comment.</p>
+                      <Button asChild>
+                        <Link to="/sign-in">Sign In</Link>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Comments List */}
+                <div className="space-y-8">
+                  {comments.length > 0 ? (
+                    comments.map((comment) => (
+                      <div key={comment.id} className="border-b pb-8">
+                        <div className="flex items-center mb-2">
+                          <div className="bg-primary text-primary-foreground h-10 w-10 rounded-full flex items-center justify-center font-semibold text-sm mr-3">
+                            {comment.userName.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="font-medium">{comment.userName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {comment.createdAt?.toDate 
+                                ? comment.createdAt.toDate().toLocaleDateString() 
+                                : new Date().toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-gray-600">{comment.content}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">
+                      No comments yet. Be the first to share your thoughts!
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Sidebar */}
+            <div>
+              {/* About Author */}
+              <div className="bg-card p-6 rounded-lg shadow-sm border mb-8">
+                <h3 className="text-lg font-semibold mb-4">About the Author</h3>
+                <div className="flex items-center mb-4">
+                  <div className="bg-primary text-primary-foreground h-12 w-12 rounded-full flex items-center justify-center font-bold text-lg mr-3">
+                    {blog.author.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-medium">{blog.author}</p>
+                    <p className="text-sm text-muted-foreground">Content Writer</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Passionate about sharing knowledge and insights on the latest trends 
+                  and innovations in the industry.
+                </p>
+                <Button variant="outline" size="sm" className="w-full">
+                  View All Posts
+                </Button>
+              </div>
+              
+              {/* Search */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4">Search</h3>
+                <form className="flex gap-2">
+                  <Input type="text" placeholder="Search articles..." className="flex-1" />
+                  <Button type="submit">Search</Button>
+                </form>
+              </div>
+              
+              {/* Related Posts */}
+              <div className="mb-8">
+                <h3 className="text-lg font-semibold mb-4">Related Posts</h3>
+                <div className="space-y-4">
+                  {relatedBlogs.map((blog) => (
+                    <div key={blog.id} className="flex gap-3">
+                      {blog.image && (
+                        <img 
+                          src={blog.image} 
+                          alt={blog.title} 
+                          className="w-20 h-16 object-cover rounded flex-shrink-0"
+                        />
+                      )}
+                      <div>
+                        <Link 
+                          to={`/blogs/${blog.id}`} 
+                          className="font-medium hover:text-primary transition-colors line-clamp-2"
+                        >
+                          {blog.title}
+                        </Link>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(blog.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {relatedBlogs.length === 0 && (
+                    <p className="text-muted-foreground text-sm">No related posts found.</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Popular Tags */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Popular Tags</h3>
+                <div className="flex flex-wrap gap-2">
+                  {["ecommerce", "shopping", "online", "retail", "products", "digital", "tips"].map((tag) => (
                     <Link 
                       key={tag} 
                       to={`/blogs?tag=${tag}`}
-                      className="text-xs px-2 py-1 bg-secondary text-secondary-foreground rounded-full hover:bg-secondary/80 transition-colors"
+                      className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm hover:bg-primary hover:text-primary-foreground transition-colors"
                     >
                       {tag}
                     </Link>
                   ))}
-                </div>
-                
-                {/* Article footer */}
-                <div className="flex flex-wrap items-center justify-between gap-4 pt-8 border-t">
-                  <div className="flex items-center gap-4">
-                    <Button variant="outline" size="sm" className="flex items-center gap-2">
-                      <Bookmark className="h-4 w-4" />
-                      <span className="hidden sm:inline">Save</span>
-                    </Button>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="hidden sm:inline">Comment</span>
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground mr-2">Share:</span>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                      <Twitter className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                      <Facebook className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                      <Linkedin className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </article>
-            </div>
-
-            {/* Sidebar */}
-            <div className="md:col-span-4 space-y-8">
-              {/* Author card */}
-              <div className="bg-secondary/40 rounded-lg p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <Avatar className="h-14 w-14">
-                    <AvatarImage src={`https://ui-avatars.com/api/?name=${blog.author}&background=random&size=96`} />
-                    <AvatarFallback>{blog.author[0]}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-medium">{blog.author}</h3>
-                    <p className="text-sm text-muted-foreground">Contributing Writer</p>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean commodo ligula eget dolor.
-                </p>
-                <Button variant="outline" className="w-full text-sm">View Profile</Button>
-              </div>
-
-              {/* Related posts */}
-              {relatedBlogs.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-lg mb-4">Related Articles</h3>
-                  <div className="space-y-6">
-                    {relatedBlogs.map(relatedBlog => (
-                      <Link 
-                        key={relatedBlog.id} 
-                        to={`/blogs/${relatedBlog.id}`}
-                        className="flex gap-4 group"
-                      >
-                        <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden">
-                          <img 
-                            src={relatedBlog.imageUrl} 
-                            alt={relatedBlog.title}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm group-hover:text-primary transition-colors line-clamp-2">
-                            {relatedBlog.title}
-                          </h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-muted-foreground">
-                              {formatDate(relatedBlog.createdAt)}
-                            </span>
-                            <span className="text-xs text-muted-foreground">•</span>
-                            <span className="text-xs text-muted-foreground">
-                              {calculateReadTime(relatedBlog.content)}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Newsletter signup */}
-              <div className="bg-primary/5 rounded-lg p-6">
-                <h3 className="font-semibold text-lg mb-2">Subscribe to our newsletter</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Get the latest posts and updates delivered to your inbox.
-                </p>
-                <div className="space-y-2">
-                  <Input placeholder="Your email address" type="email" />
-                  <Button className="w-full">Subscribe</Button>
                 </div>
               </div>
             </div>

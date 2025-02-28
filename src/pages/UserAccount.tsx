@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 import { ProductCard } from "@/components/ProductCard";
 import { toast } from "sonner";
 import { User, Package, Heart, CreditCard, LogOut } from "lucide-react";
+import { useUserOrders } from "@/hooks/useOrders";
 
 interface WishlistProduct {
   id: string;
@@ -25,6 +26,9 @@ const UserAccount = () => {
   const [wishlistProducts, setWishlistProducts] = useState<WishlistProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  
+  // Fetch user's orders
+  const { data: orders = [], isLoading: isOrdersLoading } = useUserOrders();
 
   useEffect(() => {
     if (!currentUser) {
@@ -113,6 +117,29 @@ const UserAccount = () => {
   if (!currentUser) {
     return null; // Navigate handles the redirect
   }
+
+  // Helper function to format date
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString();
+  };
+
+  // Helper function to get badge color for order status
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'processing':
+        return 'bg-blue-100 text-blue-800';
+      case 'shipped':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'delivered':
+        return 'bg-green-100 text-green-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -220,12 +247,87 @@ const UserAccount = () => {
               {activeTab === "orders" && (
                 <div>
                   <h2 className="text-2xl font-semibold mb-6">My Orders</h2>
-                  <div className="text-center py-8 border rounded-md">
-                    <p className="text-muted-foreground">You haven't placed any orders yet</p>
-                    <Button className="mt-4" onClick={() => navigate("/products")}>
-                      Browse Products
-                    </Button>
-                  </div>
+                  
+                  {isOrdersLoading ? (
+                    <div className="animate-pulse space-y-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="border rounded-lg p-4">
+                          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+                          <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : orders.length === 0 ? (
+                    <div className="text-center py-8 border rounded-md">
+                      <p className="text-muted-foreground">You haven't placed any orders yet</p>
+                      <Button className="mt-4" onClick={() => navigate("/products")}>
+                        Browse Products
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orders.map((order) => (
+                        <div key={order.id} className="border rounded-lg overflow-hidden">
+                          {/* Order header */}
+                          <div className="bg-gray-50 p-4 border-b">
+                            <div className="flex flex-wrap justify-between items-center gap-2">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Order ID: {order.id}</p>
+                                <p className="text-sm text-muted-foreground">Placed on: {formatDate(order.createdAt)}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
+                                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                </span>
+                                <p className="font-semibold">${order.totalAmount.toFixed(2)}</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Order items */}
+                          <div className="p-4">
+                            <h3 className="font-medium text-sm mb-3">Items</h3>
+                            <div className="space-y-3">
+                              {order.items.map((item) => (
+                                <div key={item.id} className="flex items-center gap-3">
+                                  <img 
+                                    src={item.image} 
+                                    alt={item.title} 
+                                    className="w-12 h-12 object-cover rounded"
+                                  />
+                                  <div className="flex-grow">
+                                    <p className="text-sm font-medium line-clamp-1">{item.title}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      ${item.price.toFixed(2)} × {item.quantity}
+                                    </p>
+                                  </div>
+                                  <div className="text-sm font-medium">
+                                    ${(item.price * item.quantity).toFixed(2)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          {/* Order footer */}
+                          <div className="bg-gray-50 p-4 border-t flex flex-wrap justify-between items-center gap-4">
+                            <div>
+                              <p className="text-sm font-medium">
+                                Shipping to: {order.shippingAddress.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Payment Method: {order.paymentMethod}
+                              </p>
+                            </div>
+                            <Button variant="outline" size="sm" asChild>
+                              <Link to={`/products`}>Buy Again</Link>
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               

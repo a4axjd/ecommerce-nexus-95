@@ -44,10 +44,14 @@ export const trackPageVisit = async (userId?: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    // Log tracking attempt
+    console.log(`Tracking page visit. User ID: ${userId ? userId : 'anonymous'}`);
+    
     const visitorStatsRef = doc(db, "analytics", "visitorStats");
     const visitorStatsSnap = await getDoc(visitorStatsRef);
     
     if (!visitorStatsSnap.exists()) {
+      console.log("Creating new visitorStats document");
       await setDoc(visitorStatsRef, {
         totalVisits: 1,
         newVisitors: isNewVisitor ? 1 : 0,
@@ -55,6 +59,7 @@ export const trackPageVisit = async (userId?: string) => {
         lastUpdated: Timestamp.now()
       });
     } else {
+      console.log("Updating existing visitorStats document");
       await setDoc(visitorStatsRef, {
         totalVisits: increment(1),
         newVisitors: isNewVisitor ? increment(1) : increment(0),
@@ -64,10 +69,14 @@ export const trackPageVisit = async (userId?: string) => {
     }
     
     // Track daily stats
-    const dailyStatsRef = doc(db, "analytics", `daily_${today.toISOString().split('T')[0]}`);
+    const dailyKey = `daily_${today.toISOString().split('T')[0]}`;
+    console.log(`Updating daily stats for: ${dailyKey}`);
+    
+    const dailyStatsRef = doc(db, "analytics", dailyKey);
     const dailyStatsSnap = await getDoc(dailyStatsRef);
     
     if (!dailyStatsSnap.exists()) {
+      console.log("Creating new daily stats document");
       await setDoc(dailyStatsRef, {
         pageVisits: 1,
         newVisitors: isNewVisitor ? 1 : 0,
@@ -77,12 +86,15 @@ export const trackPageVisit = async (userId?: string) => {
         date: today.getTime()
       });
     } else {
+      console.log("Updating existing daily stats document");
       await setDoc(dailyStatsRef, {
         pageVisits: increment(1),
         newVisitors: isNewVisitor ? increment(1) : increment(0),
         returningVisitors: isNewVisitor ? increment(0) : increment(1)
       }, { merge: true });
     }
+    
+    console.log("Successfully tracked page visit");
   } catch (error) {
     console.error("Error tracking page visit:", error);
   }
@@ -94,6 +106,8 @@ export const trackCartAddition = async (productId: string, productTitle: string)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    console.log(`Tracking cart addition: ${productTitle} (${productId})`);
+    
     // Track in overall cart stats
     const cartStatsRef = doc(db, "analytics", "cartStats");
     await setDoc(cartStatsRef, {
@@ -102,7 +116,8 @@ export const trackCartAddition = async (productId: string, productTitle: string)
     }, { merge: true });
     
     // Track in daily stats
-    const dailyStatsRef = doc(db, "analytics", `daily_${today.toISOString().split('T')[0]}`);
+    const dailyKey = `daily_${today.toISOString().split('T')[0]}`;
+    const dailyStatsRef = doc(db, "analytics", dailyKey);
     await setDoc(dailyStatsRef, {
       addedToCart: increment(1)
     }, { merge: true });
@@ -115,6 +130,8 @@ export const trackCartAddition = async (productId: string, productTitle: string)
       title: productTitle,
       lastUpdated: Timestamp.now()
     }, { merge: true });
+    
+    console.log("Successfully tracked cart addition");
   } catch (error) {
     console.error("Error tracking cart addition:", error);
   }
@@ -126,11 +143,30 @@ export const trackOrderCompletion = async () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
+    console.log("Tracking order completion");
+    
     // Track in daily stats
-    const dailyStatsRef = doc(db, "analytics", `daily_${today.toISOString().split('T')[0]}`);
-    await setDoc(dailyStatsRef, {
-      completedOrders: increment(1)
-    }, { merge: true });
+    const dailyKey = `daily_${today.toISOString().split('T')[0]}`;
+    const dailyStatsRef = doc(db, "analytics", dailyKey);
+    
+    // Create the document if it doesn't exist
+    const dailyStatsSnap = await getDoc(dailyStatsRef);
+    if (!dailyStatsSnap.exists()) {
+      await setDoc(dailyStatsRef, {
+        pageVisits: 0,
+        newVisitors: 0,
+        returningVisitors: 0,
+        addedToCart: 0,
+        completedOrders: 1,
+        date: today.getTime()
+      });
+    } else {
+      await setDoc(dailyStatsRef, {
+        completedOrders: increment(1)
+      }, { merge: true });
+    }
+    
+    console.log("Successfully tracked order completion");
   } catch (error) {
     console.error("Error tracking order completion:", error);
   }
@@ -140,6 +176,8 @@ export const useAnalytics = (period: 'week' | 'month' | 'year' = 'month') => {
   return useQuery({
     queryKey: ["analytics", period],
     queryFn: async () => {
+      console.log(`Fetching analytics data for period: ${period}`);
+      
       // Calculate start date based on period
       const now = new Date();
       let startDate = new Date();
@@ -151,6 +189,8 @@ export const useAnalytics = (period: 'week' | 'month' | 'year' = 'month') => {
       } else if (period === 'year') {
         startDate.setFullYear(now.getFullYear() - 1);
       }
+      
+      console.log(`Date range: ${startDate.toISOString()} to ${now.toISOString()}`);
       
       // Fetch orders in the period
       const ordersSnapshot = await getDocs(
@@ -209,6 +249,17 @@ export const useAnalytics = (period: 'week' | 'month' | 'year' = 'month') => {
         salesByDateMap[orderDate].orders += 1;
       });
       
+      // If we don't have any orders, create some empty data for display purposes
+      if (Object.keys(salesByDateMap).length === 0) {
+        // Generate date entries for the entire period
+        let current = new Date(startDate);
+        while (current <= now) {
+          const dateKey = current.toISOString().split('T')[0];
+          salesByDateMap[dateKey] = { revenue: 0, orders: 0 };
+          current.setDate(current.getDate() + 1);
+        }
+      }
+      
       // Convert sales by date map to array and sort
       const salesByDate = Object.entries(salesByDateMap).map(([date, data]) => ({
         date,
@@ -234,6 +285,9 @@ export const useAnalytics = (period: 'week' | 'month' | 'year' = 'month') => {
         visitorStats.totalVisitors = data.totalVisits || 0;
         visitorStats.newVisitors = data.newVisitors || 0;
         visitorStats.returningVisitors = data.returningVisitors || 0;
+        console.log("Fetched visitor stats:", visitorStats);
+      } else {
+        console.log("No visitor stats found, creating empty data");
       }
       
       // Fetch cart stats
@@ -254,28 +308,40 @@ export const useAnalytics = (period: 'week' | 'month' | 'year' = 'month') => {
         cartActivity.conversionRate = cartActivity.addedToCart > 0 
           ? (orders.length / cartActivity.addedToCart) * 100 
           : 0;
+        
+        console.log("Fetched cart stats:", cartActivity);
+      } else {
+        console.log("No cart stats found, creating empty data");
       }
       
       // Fetch top added to cart products
-      const productStatsSnapshot = await getDocs(
-        query(
-          collection(db, "analytics"),
-          where("productId", "!=", null),
-          orderBy("productId"),
-          orderBy("addedToCart", "desc")
-        )
-      );
+      let topAddedProducts: { id: string; title: string; count: number }[] = [];
+      try {
+        const productStatsSnapshot = await getDocs(
+          query(
+            collection(db, "analytics"),
+            where("productId", "!=", null)
+          )
+        );
+        
+        topAddedProducts = productStatsSnapshot.docs
+          .map(doc => {
+            const data = doc.data();
+            return {
+              id: data.productId,
+              title: data.title,
+              count: data.addedToCart
+            };
+          })
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        
+        console.log(`Fetched ${topAddedProducts.length} top added products`);
+      } catch (error) {
+        console.error("Error fetching top added products:", error);
+      }
       
-      cartActivity.topAddedProducts = productStatsSnapshot.docs
-        .map(doc => {
-          const data = doc.data();
-          return {
-            id: data.productId,
-            title: data.title,
-            count: data.addedToCart
-          };
-        })
-        .slice(0, 5);
+      cartActivity.topAddedProducts = topAddedProducts;
       
       return {
         totalRevenue,

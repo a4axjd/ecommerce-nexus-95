@@ -1,6 +1,6 @@
 
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
@@ -36,6 +36,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 60 * 1000,
+      retry: 1,
     },
   },
 });
@@ -61,8 +62,8 @@ const App = () => (
       <TooltipProvider>
         <CartProvider>
           <Elements stripe={stripePromise}>
-            <Toaster />
-            <Sonner />
+            {/* Only include the Sonner toaster, remove the shadcn/ui toaster */}
+            <Sonner position="top-right" />
             <BrowserRouter>
               <AnalyticsTracker />
               <Routes>
