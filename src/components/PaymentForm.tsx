@@ -191,7 +191,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
 
       <TabsContent value="paypal">
         <PayPalScriptProvider options={{ 
-          clientId: "test", // Replace with your PayPal client ID in production
+          clientId: "ARkPW5-IHUgervnUw1eF3414X9OLy2iejt8ObwBmqG2f9pK7c0CSCsNVXt_NFc00OOPfXNoF4rWbA0Fc", // Replace with your PayPal client ID in production
           currency: "USD",
           intent: "capture"
         }}>
