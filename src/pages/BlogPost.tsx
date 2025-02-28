@@ -191,10 +191,10 @@ const BlogPost = () => {
               </div>
               
               {/* Featured Image */}
-              {blog.image && (
+              {blog.imageUrl && (
                 <div className="mb-8">
                   <img 
-                    src={blog.image} 
+                    src={blog.imageUrl} 
                     alt={blog.title} 
                     className="w-full h-auto rounded-lg object-cover"
                   />
@@ -319,9 +319,9 @@ const BlogPost = () => {
                 <div className="space-y-4">
                   {relatedBlogs.map((blog) => (
                     <div key={blog.id} className="flex gap-3">
-                      {blog.image && (
+                      {blog.imageUrl && (
                         <img 
-                          src={blog.image} 
+                          src={blog.imageUrl} 
                           alt={blog.title} 
                           className="w-20 h-16 object-cover rounded flex-shrink-0"
                         />
