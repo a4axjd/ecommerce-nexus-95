@@ -3,12 +3,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { Elements } from '@stripe/react-stripe-js';
 import { stripePromise } from "@/lib/stripe";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useEffect } from "react";
+import { trackPageVisit } from "@/hooks/useAnalytics";
+import { useAuth } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -37,6 +40,21 @@ const queryClient = new QueryClient({
   },
 });
 
+// Analytics tracker component
+const AnalyticsTracker = () => {
+  const location = useLocation();
+  const { currentUser } = useAuth();
+
+  useEffect(() => {
+    // Track page visit when location changes
+    trackPageVisit(currentUser?.uid).catch(error => 
+      console.error("Failed to track page visit:", error)
+    );
+  }, [location.pathname, currentUser]);
+
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -46,6 +64,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <AnalyticsTracker />
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/products" element={<Products />} />

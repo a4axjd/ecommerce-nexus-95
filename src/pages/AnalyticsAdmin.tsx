@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAnalytics } from "@/hooks/useAnalytics";
-import { Bar, Line, BarChart, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { Bar, Line, BarChart, LineChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { toast } from "sonner";
-import { DollarSign, ShoppingBag, CreditCard, TrendingUp } from "lucide-react";
+import { DollarSign, ShoppingBag, CreditCard, TrendingUp, Users, ShoppingCart, UserPlus, UserCheck, Percent } from "lucide-react";
 import { AdminSidebar } from "@/components/AdminSidebar";
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 const AnalyticsAdmin = () => {
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
@@ -40,6 +42,7 @@ const AnalyticsAdmin = () => {
             </div>
           ) : data ? (
             <div className="space-y-8">
+              {/* Revenue Stats */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -79,6 +82,89 @@ const AnalyticsAdmin = () => {
                 </Card>
               </div>
               
+              {/* Visitor Stats */}
+              <h2 className="text-xl font-semibold mb-4">Visitor Activity</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{data.visitorStats.totalVisitors}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Unique page visits
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">New Visitors</CardTitle>
+                    <UserPlus className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{data.visitorStats.newVisitors}</div>
+                    <p className="text-xs text-muted-foreground">
+                      First-time visitors
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Returning Visitors</CardTitle>
+                    <UserCheck className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{data.visitorStats.returningVisitors}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Repeat visitors
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Cart Activity */}
+              <h2 className="text-xl font-semibold mb-4">Cart Activity</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Added to Cart</CardTitle>
+                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{data.cartActivity.addedToCart}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Items added to carts
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Cart Abandonment</CardTitle>
+                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{data.cartActivity.cartAbandonment}</div>
+                    <p className="text-xs text-muted-foreground">
+                      Abandoned carts
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+                    <Percent className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{data.cartActivity.conversionRate.toFixed(2)}%</div>
+                    <p className="text-xs text-muted-foreground">
+                      Cart to order rate
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <Card>
                   <CardHeader>
@@ -128,36 +214,136 @@ const AnalyticsAdmin = () => {
                 </Card>
               </div>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Selling Products</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {data.topProducts.map((product, index) => (
-                      <div key={product.id} className="flex items-center">
-                        <div className="w-6 text-muted-foreground">{index + 1}.</div>
-                        <div className="flex-grow">
-                          <div className="font-medium">{product.title}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {product.quantity} units sold
+              {/* Visitor Breakdown */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Visitor Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'New Visitors', value: data.visitorStats.newVisitors },
+                            { name: 'Returning Visitors', value: data.visitorStats.returningVisitors }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {[
+                            { name: 'New Visitors', value: data.visitorStats.newVisitors },
+                            { name: 'Returning Visitors', value: data.visitorStats.returningVisitors }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cart Conversion</CardTitle>
+                  </CardHeader>
+                  <CardContent className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Completed Orders', value: data.totalOrders },
+                            { name: 'Abandoned Carts', value: data.cartActivity.cartAbandonment }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {[
+                            { name: 'Completed Orders', value: data.totalOrders },
+                            { name: 'Abandoned Carts', value: data.cartActivity.cartAbandonment }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              {/* Products */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Top Selling Products</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {data.topProducts.map((product, index) => (
+                        <div key={product.id} className="flex items-center">
+                          <div className="w-6 text-muted-foreground">{index + 1}.</div>
+                          <div className="flex-grow">
+                            <div className="font-medium">{product.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {product.quantity} units sold
+                            </div>
+                          </div>
+                          <div className="text-right font-medium">
+                            ${product.revenue.toFixed(2)}
                           </div>
                         </div>
-                        <div className="text-right font-medium">
-                          ${product.revenue.toFixed(2)}
+                      ))}
+                      
+                      {data.topProducts.length === 0 && (
+                        <p className="text-center text-muted-foreground py-4">
+                          No product data available for this period.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Top Added to Cart Products</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {data.cartActivity.topAddedProducts.map((product, index) => (
+                        <div key={product.id} className="flex items-center">
+                          <div className="w-6 text-muted-foreground">{index + 1}.</div>
+                          <div className="flex-grow">
+                            <div className="font-medium">{product.title}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Added to cart {product.count} times
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                    
-                    {data.topProducts.length === 0 && (
-                      <p className="text-center text-muted-foreground py-4">
-                        No product data available for this period.
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                      ))}
+                      
+                      {data.cartActivity.topAddedProducts.length === 0 && (
+                        <p className="text-center text-muted-foreground py-4">
+                          No cart data available for this period.
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
               
+              {/* Recent Orders */}
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Orders</CardTitle>

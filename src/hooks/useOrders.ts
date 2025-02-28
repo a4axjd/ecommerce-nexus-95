@@ -37,13 +37,17 @@ export const useOrders = () => {
   return useQuery({
     queryKey: ["orders"],
     queryFn: async () => {
+      console.log("Fetching all orders");
       const querySnapshot = await getDocs(
         query(collection(db, "orders"), orderBy("createdAt", "desc"))
       );
-      return querySnapshot.docs.map(doc => ({
+      const orders = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Order[];
+      
+      console.log("Fetched orders:", orders);
+      return orders;
     },
   });
 };
@@ -53,6 +57,7 @@ export const useOrder = (id: string) => {
     queryKey: ["order", id],
     queryFn: async () => {
       if (!id) return null;
+      console.log("Fetching single order:", id);
       const docRef = doc(db, "orders", id);
       const docSnap = await getDoc(docRef);
       if (!docSnap.exists()) return null;
@@ -72,6 +77,7 @@ export const useUserOrders = () => {
     queryKey: ["userOrders", currentUser?.uid],
     queryFn: async () => {
       if (!currentUser) return [];
+      console.log("Fetching orders for user:", currentUser.uid);
       const querySnapshot = await getDocs(
         query(
           collection(db, "orders"), 
@@ -79,10 +85,13 @@ export const useUserOrders = () => {
           orderBy("createdAt", "desc")
         )
       );
-      return querySnapshot.docs.map(doc => ({
+      const orders = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Order[];
+      
+      console.log("Fetched user orders:", orders);
+      return orders;
     },
     enabled: !!currentUser,
   });
@@ -93,16 +102,20 @@ export const useCreateOrder = () => {
   
   return useMutation({
     mutationFn: async (order: Omit<Order, "id">) => {
+      console.log("Creating new order:", order);
       const docRef = await addDoc(collection(db, "orders"), {
         ...order,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+      console.log("Order created with ID:", docRef.id);
       return { id: docRef.id, ...order };
     },
     onSuccess: () => {
+      console.log("Invalidating orders queries after successful order creation");
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["userOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
     },
   });
 };
@@ -112,6 +125,7 @@ export const useUpdateOrderStatus = () => {
   
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Order["status"] }) => {
+      console.log(`Updating order ${id} status to ${status}`);
       await updateDoc(doc(db, "orders", id), { 
         status,
         updatedAt: Date.now()
@@ -119,9 +133,11 @@ export const useUpdateOrderStatus = () => {
       return { id, status };
     },
     onSuccess: (data) => {
+      console.log("Order status updated successfully");
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["order", data.id] });
       queryClient.invalidateQueries({ queryKey: ["userOrders"] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
     },
   });
 };
