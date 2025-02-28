@@ -40,9 +40,11 @@ const SignIn = () => {
 
   if (currentUser && !loading) {
     if (isAdmin) {
-      return navigate("/admin");
+      navigate("/admin");
+      return null; // Must return JSX, not void
     } else {
-      return navigate("/account");
+      navigate("/account");
+      return null; // Must return JSX, not void
     }
   }
 
