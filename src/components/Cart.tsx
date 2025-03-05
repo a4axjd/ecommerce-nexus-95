@@ -247,12 +247,16 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                     onClose();
                     navigate("/products");
                   }}
+                  className="whitespace-nowrap text-sm px-2"
                 >
-                  Continue Shopping
+                  Continue
                 </Button>
-                <Button onClick={handleCheckout} className="gap-1">
+                <Button 
+                  onClick={handleCheckout} 
+                  className="whitespace-nowrap text-sm px-2"
+                >
                   Checkout
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
               

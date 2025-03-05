@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -46,6 +45,8 @@ const ProductDetail = () => {
   const [isInWishlist, setIsInWishlist] = useState(false);
   const [averageRating, setAverageRating] = useState(0);
   const [selectedImage, setSelectedImage] = useState("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  const [selectedSize, setSelectedSize] = useState<string>("");
   const { addToCart } = useCart();
   const { currentUser } = useAuth();
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
@@ -53,23 +54,28 @@ const ProductDetail = () => {
   const { data: product, isLoading } = useProduct(id || "");
   const { data: allProducts = [] } = useProducts();
   
-  // Set the selected image when product loads
   useEffect(() => {
     if (product) {
       setSelectedImage(product.image);
+      
+      if (product.availableColors && product.availableColors.length > 0) {
+        setSelectedColor(product.availableColors[0]);
+      }
+      
+      if (product.availableSizes && product.availableSizes.length > 0) {
+        setSelectedSize(product.availableSizes[0]);
+      }
     }
   }, [product]);
   
-  // Track recently viewed products
   useEffect(() => {
     if (!id) return;
     
     const storedRecent = localStorage.getItem('recentlyViewed');
     const recentProducts = storedRecent ? JSON.parse(storedRecent) : [];
     
-    // Add current product to recently viewed if not already there
     if (!recentProducts.includes(id)) {
-      const updatedRecent = [id, ...recentProducts].slice(0, 4); // Keep only 4 recent items
+      const updatedRecent = [id, ...recentProducts].slice(0, 4);
       localStorage.setItem('recentlyViewed', JSON.stringify(updatedRecent));
       setRecentlyViewed(updatedRecent);
     } else {
@@ -77,12 +83,10 @@ const ProductDetail = () => {
     }
   }, [id]);
   
-  // Get related products (same category)
   const relatedProducts = allProducts
     .filter(p => p.id !== id && p.category === product?.category)
     .slice(0, 4);
 
-  // Fetch reviews for this product
   useEffect(() => {
     const fetchReviews = async () => {
       if (!id) return;
@@ -103,7 +107,6 @@ const ProductDetail = () => {
         
         setReviews(reviewsData);
         
-        // Calculate average rating
         if (reviewsData.length > 0) {
           const totalRating = reviewsData.reduce((sum, review) => sum + review.rating, 0);
           setAverageRating(Math.round((totalRating / reviewsData.length) * 10) / 10);
@@ -116,7 +119,6 @@ const ProductDetail = () => {
     fetchReviews();
   }, [id]);
   
-  // Check if product is in wishlist
   useEffect(() => {
     const checkWishlist = async () => {
       if (!currentUser || !id) return;
@@ -150,7 +152,6 @@ const ProductDetail = () => {
       const userRef = doc(db, "users", currentUser.uid);
       const userSnap = await getDoc(userRef);
       
-      // Create user document if it doesn't exist
       if (!userSnap.exists()) {
         await setDoc(userRef, {
           email: currentUser.email,
@@ -160,14 +161,12 @@ const ProductDetail = () => {
       }
       
       if (isInWishlist) {
-        // Remove from wishlist
         await updateDoc(userRef, {
           wishlist: arrayRemove(id)
         });
         setIsInWishlist(false);
         toast.success("Removed from wishlist");
       } else {
-        // Add to wishlist
         await updateDoc(userRef, {
           wishlist: arrayUnion(id)
         });
@@ -204,7 +203,6 @@ const ProductDetail = () => {
       
       toast.success("Review submitted successfully");
       
-      // Refresh reviews
       const q = query(
         collection(db, "reviews"),
         where("productId", "==", id),
@@ -220,13 +218,11 @@ const ProductDetail = () => {
       
       setReviews(reviewsData);
       
-      // Recalculate average rating
       if (reviewsData.length > 0) {
         const totalRating = reviewsData.reduce((sum, review) => sum + review.rating, 0);
         setAverageRating(Math.round((totalRating / reviewsData.length) * 10) / 10);
       }
       
-      // Reset form
       setNewReview({ rating: 5, comment: "" });
     } catch (error) {
       console.error("Error submitting review:", error);
@@ -234,6 +230,41 @@ const ProductDetail = () => {
     }
   };
   
+  const handleAddToCart = () => {
+    const variationInfo = selectedColor || selectedSize ? 
+      `${selectedColor ? `Color: ${selectedColor}` : ""}${selectedColor && selectedSize ? ", " : ""}${selectedSize ? `Size: ${selectedSize}` : ""}` : 
+      "";
+    
+    const productTitle = variationInfo ? `${product.title} (${variationInfo})` : product.title;
+    
+    addToCart({
+      id: product.id,
+      title: productTitle,
+      price: product.price,
+      image: product.image,
+      quantity,
+      color: selectedColor,
+      size: selectedSize,
+    });
+    
+    toast.success("Added to cart");
+  };
+
+  const getVariationPrice = () => {
+    if (!product?.variations || !selectedColor || !selectedSize) return product?.price || 0;
+    
+    const variation = product.variations.find(v => 
+      (!v.color || v.color === selectedColor) && 
+      (!v.size || v.size === selectedSize)
+    );
+    
+    return variation && variation.price_adjustment ? 
+      product.price + variation.price_adjustment : 
+      product.price;
+  };
+
+  const productPrice = getVariationPrice();
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -267,20 +298,7 @@ const ProductDetail = () => {
     );
   }
 
-  const handleAddToCart = () => {
-    addToCart({
-      id: product.id,
-      title: product.title,
-      price: product.price,
-      image: product.image,
-      quantity,
-    });
-    
-    toast.success("Added to cart");
-  };
-
-  // Get the list of all images (main + additional)
-  const allImages = product.images || [product.image];
+  const allImages = product?.images || [product?.image];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -288,33 +306,29 @@ const ProductDetail = () => {
       
       <main className="flex-grow pt-24 pb-16">
         <div className="container mx-auto px-4">
-          {/* Breadcrumb navigation */}
           <div className="text-sm text-muted-foreground mb-6">
             <Link to="/" className="hover:text-primary">Home</Link>
             <span className="mx-2">/</span>
             <Link to="/products" className="hover:text-primary">Products</Link>
             <span className="mx-2">/</span>
-            <span>{product.title}</span>
+            <span>{product?.title}</span>
           </div>
 
-          {/* Product Detail */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-            {/* Product Image */}
             <div className="space-y-4">
               <div className="aspect-square w-full overflow-hidden rounded-lg bg-gray-100 shadow-md relative">
                 <img
                   src={selectedImage}
-                  alt={product.title}
+                  alt={product?.title}
                   className="h-full w-full object-cover transition-transform hover:scale-105 duration-500"
                 />
-                {product.featured && (
+                {product?.featured && (
                   <div className="absolute top-4 left-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-medium">
                     Featured
                   </div>
                 )}
               </div>
               
-              {/* Thumbnail images */}
               {allImages.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {allImages.map((img, index) => (
@@ -327,7 +341,7 @@ const ProductDetail = () => {
                     >
                       <img 
                         src={img} 
-                        alt={`${product.title} - image ${index + 1}`} 
+                        alt={`${product?.title} - image ${index + 1}`} 
                         className="h-full w-full object-cover"
                       />
                     </button>
@@ -336,12 +350,11 @@ const ProductDetail = () => {
               )}
             </div>
 
-            {/* Product Details */}
             <div className="space-y-6">
               <div>
                 <div className="flex items-center mb-2">
                   <span className="px-2.5 py-0.5 bg-secondary text-secondary-foreground rounded-full text-xs font-medium mr-2">
-                    {product.category}
+                    {product?.category}
                   </span>
                   <div className="flex items-center text-amber-500">
                     {Array(5).fill(0).map((_, i) => (
@@ -352,8 +365,8 @@ const ProductDetail = () => {
                     </span>
                   </div>
                 </div>
-                <h1 className="text-3xl font-semibold">{product.title}</h1>
-                <p className="text-2xl font-bold mt-2">${product.price.toFixed(2)}</p>
+                <h1 className="text-3xl font-semibold">{product?.title}</h1>
+                <p className="text-2xl font-bold mt-2">${productPrice.toFixed(2)}</p>
               </div>
 
               <div className="flex items-center space-x-4 text-sm text-muted-foreground">
@@ -367,9 +380,50 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              <p className="text-gray-600 leading-relaxed">{product.description}</p>
+              <p className="text-gray-600 leading-relaxed">{product?.description}</p>
 
-              {/* Quantity Selection */}
+              {product?.availableColors && product.availableColors.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-medium">Color</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {product.availableColors.map((color, index) => (
+                      <button
+                        key={index}
+                        className={`h-8 w-8 rounded-full border ${
+                          selectedColor === color 
+                            ? 'ring-2 ring-primary ring-offset-2' 
+                            : 'ring-0'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setSelectedColor(color)}
+                        aria-label={`Select ${color} color`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {product?.availableSizes && product.availableSizes.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-medium">Size</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {product.availableSizes.map((size, index) => (
+                      <button
+                        key={index}
+                        className={`h-10 min-w-10 px-3 rounded-md border ${
+                          selectedSize === size 
+                            ? 'bg-primary text-primary-foreground border-primary' 
+                            : 'bg-white border-gray-300'
+                        }`}
+                        onClick={() => setSelectedSize(size)}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <h3 className="font-medium">Quantity</h3>
                 <div className="flex items-center gap-4">
@@ -391,7 +445,6 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* Add to Cart Button */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Button
                   className="w-full"
@@ -424,17 +477,15 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* Product Tags */}
               <div className="flex flex-wrap items-center gap-2 pt-4 border-t">
                 <Tag className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Tags:</span>
-                <span className="text-sm bg-secondary px-2 py-1 rounded-full">{product.category}</span>
+                <span className="text-sm bg-secondary px-2 py-1 rounded-full">{product?.category}</span>
                 <span className="text-sm bg-secondary px-2 py-1 rounded-full">trending</span>
               </div>
             </div>
           </div>
 
-          {/* Related Products */}
           {relatedProducts.length > 0 && (
             <section className="mb-16">
               <div className="flex items-center justify-between mb-6">
@@ -460,7 +511,6 @@ const ProductDetail = () => {
             </section>
           )}
 
-          {/* Product Details Tabs */}
           <div className="border-t pt-8">
             <div className="flex border-b mb-6 overflow-x-auto whitespace-nowrap">
               <button 
@@ -489,10 +539,9 @@ const ProductDetail = () => {
               </button>
             </div>
 
-            {/* Description Tab */}
             {activeTab === "description" && (
               <div className="prose max-w-none">
-                <p>{product.description}</p>
+                <p>{product?.description}</p>
                 <p className="mt-4">
                   Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
                 </p>
@@ -505,10 +554,8 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Reviews Tab */}
             {activeTab === "reviews" && (
               <div className="space-y-8">
-                {/* Reviews List */}
                 {reviews.length > 0 ? (
                   <div className="space-y-6">
                     {reviews.map((review) => (
@@ -539,10 +586,7 @@ const ProductDetail = () => {
                   </div>
                 )}
 
-                {/* Review Form */}
                 <div className="bg-gray-50 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold mb-4">Write a Review</h3>
-                  
                   {currentUser ? (
                     <form onSubmit={handleSubmitReview} className="space-y-4">
                       <div>
@@ -590,17 +634,16 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Shipping & Returns Tab */}
             {activeTab === "shipping" && (
               <div className="prose max-w-none">
                 <h3>Shipping Information</h3>
                 <p>
-                  {product.shippingInfo || "We ship to locations worldwide. Shipping times and costs will vary based on location. Standard shipping usually takes 3-7 business days within the continental United States."}
+                  {product?.shippingInfo || "We ship to locations worldwide. Shipping times and costs will vary based on location. Standard shipping usually takes 3-7 business days within the continental United States."}
                 </p>
                 
                 <h3 className="mt-6">Return Policy</h3>
                 <p>
-                  {product.returnPolicy || "If you're not completely satisfied with your purchase, you may return it within 30 days of receipt for a full refund of the item price. To be eligible for a return, your item must be in the same condition that you received it, unworn or unused, with tags, and in its original packaging."}
+                  {product?.returnPolicy || "If you're not completely satisfied with your purchase, you may return it within 30 days of receipt for a full refund of the item price. To be eligible for a return, your item must be in the same condition that you received it, unworn or unused, with tags, and in its original packaging."}
                 </p>
                 
                 <h4 className="mt-4">How to Return</h4>

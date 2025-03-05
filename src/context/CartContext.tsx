@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useReducer, ReactNode } from "react";
 import { trackCartAddition } from "@/hooks/useAnalytics";
 
@@ -8,6 +7,8 @@ interface CartItem {
   price: number;
   image: string;
   quantity: number;
+  color?: string;
+  size?: string;
 }
 
 interface CartState {
@@ -40,7 +41,9 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
     case "ADD_ITEM": {
       const existingItemIndex = state.items.findIndex(
-        item => item.id === action.payload.id
+        item => item.id === action.payload.id && 
+              item.color === action.payload.color && 
+              item.size === action.payload.size
       );
 
       if (existingItemIndex > -1) {

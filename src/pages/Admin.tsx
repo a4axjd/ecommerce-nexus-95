@@ -1,10 +1,9 @@
-
 import { useState } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useProducts, Product } from "@/hooks/useProducts";
+import { useProducts, Product, ProductVariation } from "@/hooks/useProducts";
 import { Pencil, Trash, Star, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { AdminSidebar } from "@/components/AdminSidebar";
@@ -23,6 +22,8 @@ const Admin = () => {
     featured: false,
     shippingInfo: "",
     returnPolicy: "",
+    availableColors: "",
+    availableSizes: "",
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -74,7 +75,16 @@ const Admin = () => {
       // Filter out empty image URLs
       const filteredAdditionalImages = formData.additionalImages.filter(url => url.trim() !== "");
       
-      // Prepare the product data with direct image URL and additional images
+      // Process colors and sizes
+      const availableColors = formData.availableColors ? 
+        formData.availableColors.split(',').map(color => color.trim()) : 
+        [];
+        
+      const availableSizes = formData.availableSizes ? 
+        formData.availableSizes.split(',').map(size => size.trim()) : 
+        [];
+      
+      // Prepare the product data
       const productData = {
         title: formData.title,
         description: formData.description,
@@ -85,6 +95,8 @@ const Admin = () => {
         featured: formData.featured,
         shippingInfo: formData.shippingInfo,
         returnPolicy: formData.returnPolicy,
+        availableColors: availableColors.length > 0 ? availableColors : null,
+        availableSizes: availableSizes.length > 0 ? availableSizes : null,
       };
 
       console.log("Product data prepared:", productData);
@@ -119,6 +131,8 @@ const Admin = () => {
         featured: false,
         shippingInfo: "",
         returnPolicy: "",
+        availableColors: "",
+        availableSizes: "",
       });
       setSelectedProduct(null);
       
@@ -151,6 +165,8 @@ const Admin = () => {
       featured: product.featured || false,
       shippingInfo: product.shippingInfo || "",
       returnPolicy: product.returnPolicy || "",
+      availableColors: product.availableColors ? product.availableColors.join(', ') : "",
+      availableSizes: product.availableSizes ? product.availableSizes.join(', ') : "",
     });
   };
 
@@ -323,6 +339,40 @@ const Admin = () => {
                   />
                 </div>
 
+                <div>
+                  <label htmlFor="availableColors" className="block text-sm font-medium mb-1">
+                    Available Colors (comma separated)
+                  </label>
+                  <Input
+                    type="text"
+                    id="availableColors"
+                    name="availableColors"
+                    value={formData.availableColors}
+                    onChange={handleInputChange}
+                    placeholder="e.g. #ff0000, #00ff00, #0000ff"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Add colors as hex codes or names separated by commas
+                  </p>
+                </div>
+
+                <div>
+                  <label htmlFor="availableSizes" className="block text-sm font-medium mb-1">
+                    Available Sizes (comma separated)
+                  </label>
+                  <Input
+                    type="text"
+                    id="availableSizes"
+                    name="availableSizes"
+                    value={formData.availableSizes}
+                    onChange={handleInputChange}
+                    placeholder="e.g. S, M, L, XL"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Add sizes separated by commas
+                  </p>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -362,6 +412,8 @@ const Admin = () => {
                           featured: false,
                           shippingInfo: "",
                           returnPolicy: "",
+                          availableColors: "",
+                          availableSizes: "",
                         });
                       }}
                       disabled={isSubmitting}

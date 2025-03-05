@@ -3,6 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
+export interface ProductVariation {
+  color?: string;
+  size?: string;
+  stock?: number;
+  price_adjustment?: number;
+}
+
 export interface Product {
   id: string;
   title: string;
@@ -14,6 +21,9 @@ export interface Product {
   featured?: boolean;
   shippingInfo?: string;
   returnPolicy?: string;
+  variations?: ProductVariation[];
+  availableColors?: string[];
+  availableSizes?: string[];
 }
 
 export const useProducts = () => {
