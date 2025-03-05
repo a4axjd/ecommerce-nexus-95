@@ -1,4 +1,3 @@
-
 import { Fragment, useEffect, useState } from "react";
 import { Minus, Plus, X, ShoppingBag, ArrowRight, BadgePercent, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
   const [discount, setDiscount] = useState(0);
   const { data: allProducts = [] } = useProducts();
   
-  // Get recommended products that are not in the cart
   const recommendedProducts = allProducts
     .filter(product => 
       !state.items.some(item => item.id === product.id) && 
@@ -42,7 +40,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
   const handleApplyCoupon = () => {
     setIsApplying(true);
     
-    // Simulate coupon application
     setTimeout(() => {
       if (couponCode.toLowerCase() === "save10") {
         const discountAmount = subtotal * 0.1;
@@ -54,7 +51,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
   };
 
   useEffect(() => {
-    // Reset discount when cart changes
     if (subtotal === 0) {
       setDiscount(0);
     }
@@ -91,7 +87,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
             <div className="flex flex-col gap-4 py-4 flex-grow overflow-auto">
               {state.items.map((item) => (
                 <div key={item.id} className="flex gap-4 pb-4 border-b">
-                  {/* Product Image */}
                   <div className="relative h-20 w-20 overflow-hidden rounded-md border">
                     <img
                       src={item.image}
@@ -100,7 +95,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                     />
                   </div>
 
-                  {/* Product Details */}
                   <div className="flex flex-1 flex-col justify-between">
                     <div className="flex justify-between">
                       <div>
@@ -122,7 +116,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                       </Button>
                     </div>
 
-                    {/* Quantity Controls */}
                     <div className="flex items-center gap-2 mt-2">
                       <Button
                         variant="outline"
@@ -146,7 +139,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                 </div>
               ))}
 
-              {/* Coupon section */}
               <div className="space-y-2 pt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -176,7 +168,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                 <p className="text-xs text-muted-foreground">Try code "SAVE10" for 10% off</p>
               </div>
 
-              {/* Shipping estimate */}
               <div className="flex items-start gap-2 bg-secondary/30 p-3 rounded-md">
                 <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
                 <div>
@@ -185,7 +176,6 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                 </div>
               </div>
 
-              {/* Recommended products */}
               {recommendedProducts.length > 0 && (
                 <div className="space-y-3 pt-2">
                   <h4 className="text-sm font-medium">You might also like</h4>
@@ -247,13 +237,13 @@ export const Cart = ({ isOpen, onClose }: CartProps) => {
                     onClose();
                     navigate("/products");
                   }}
-                  className="whitespace-nowrap text-sm px-2"
+                  className="w-full whitespace-nowrap text-sm"
                 >
                   Continue
                 </Button>
                 <Button 
                   onClick={handleCheckout} 
-                  className="whitespace-nowrap text-sm px-2"
+                  className="w-full whitespace-nowrap text-sm"
                 >
                   Checkout
                   <ArrowRight className="h-4 w-4 ml-1" />
