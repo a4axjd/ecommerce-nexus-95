@@ -1,4 +1,3 @@
-
 # Modern E-commerce Store - Complete Project Guide
 
 This project is a full-featured e-commerce web application built with modern web technologies. This guide provides a comprehensive overview of the project structure, components, and functionality to help you understand and modify the codebase, even if you have no prior knowledge of the project.
@@ -21,6 +20,8 @@ This project is a full-featured e-commerce web application built with modern web
 14. [Editing Guidelines](#editing-guidelines)
 15. [Common Tasks](#common-tasks)
 16. [Troubleshooting](#troubleshooting)
+17. [Payment Processors](#payment-processors)
+18. [Store Settings](#store-settings)
 
 ## Project Overview
 
@@ -287,6 +288,11 @@ Custom hooks provide reusable logic:
 6. **use-mobile (`src/hooks/use-mobile.tsx`)**: 
    - Responsive design helper for detecting mobile devices
 
+7. **useStoreSettings (`src/hooks/useStoreSettings.tsx`)**:
+   - Manages global store settings like currency and region
+   - Provides functions for updating store settings
+   - Used throughout the application for consistent formatting
+
 ## Utilities
 
 Utility functions and configurations:
@@ -303,6 +309,10 @@ Utility functions and configurations:
 
 4. **Notifications (`src/lib/notifications.ts`)**: 
    - Toast notification configuration and functions
+
+5. **Store Settings (`src/lib/storeSettings.ts`)**:
+   - Configuration for store currency and region settings
+   - Functions for formatting prices according to store settings
 
 ## Firebase Integration
 
@@ -343,6 +353,67 @@ Payment processing is handled through Stripe:
 - Configured in `src/lib/stripe.ts`
 - Uses `@stripe/react-stripe-js` for React components
 
+## Payment Processors
+
+The application supports multiple payment methods through the `PaymentForm` component:
+
+### Available Payment Methods
+
+1. **Credit Card**
+   - Direct card input with validation
+   - Configured in `src/components/PaymentForm.tsx`
+   - Customizable styling and validation rules
+
+2. **PayPal**
+   - Integration using PayPal Express Checkout
+   - Uses the `@paypal/react-paypal-js` package
+   - Client ID configuration in `PaymentForm.tsx`
+
+3. **Cash on Delivery (COD)**
+   - Simple option for pay-on-delivery orders
+   - No external integration required
+   - Fully customizable messaging and instructions
+
+### Adding or Editing Payment Methods
+
+To modify existing payment methods or add new ones:
+
+1. **Edit `src/components/PaymentForm.tsx`**:
+   - Contains all payment processor implementations
+   - Organized in tabs for each payment method
+   - Each method has its own form and handling logic
+
+2. **For adding a new payment method**:
+   - Add a new tab in the `TabsList` component
+   - Create a new `TabsContent` section with the form and logic
+   - Update the `paymentMethod` state type to include your new method
+   - Implement the handling function for the new payment method
+
+3. **For modifying an existing payment method**:
+   - Locate the relevant `TabsContent` section
+   - Modify the form, styling, or logic as needed
+   - Update validation rules if necessary
+
+4. **Handling success and callbacks**:
+   - All payment methods use the `onSuccess` prop to notify the parent component
+   - The parent component (`Checkout.tsx`) handles the order creation
+
+### Payment API Keys
+
+For payment processors requiring API keys:
+
+1. **Stripe**: 
+   - Update the publishable key in `src/lib/stripe.ts`
+   - Keep the secret key secure on your backend
+
+2. **PayPal**: 
+   - Update the client ID in the `PayPalScriptProvider` in `PaymentForm.tsx`
+   - Configure additional parameters in the same component
+
+3. **Other Processors**:
+   - Add API keys and configuration to appropriate files
+   - Follow security best practices for handling keys
+
 ## Authentication
 
 User authentication flow:
@@ -351,6 +422,30 @@ User authentication flow:
 2. Login is handled in `SignIn.tsx`
 3. Authentication state is managed in `AuthContext.tsx`
 4. Protected routes check authentication status before rendering
+
+## Store Settings
+
+The application includes global store settings that can be managed from the Admin dashboard:
+
+1. **Currency Settings**:
+   - Configure the currency used throughout the store
+   - Set the currency symbol and its position (before or after amount)
+   - Preview how prices will be displayed
+
+2. **Region Settings**:
+   - Set the country/region for your store
+   - Automatically configures country codes and timezones
+   - Affects shipping rules and tax calculations
+
+3. **Implementation**:
+   - Settings are stored in Firebase Firestore
+   - Managed through `src/hooks/useStoreSettings.ts`
+   - Applied globally via the `formatPrice` utility function
+
+4. **Adding New Settings**:
+   - Extend the `StoreSettings` interface in `src/lib/storeSettings.ts`
+   - Add new fields to the Admin interface in `src/pages/Admin.tsx`
+   - Implement the logic to use these settings in relevant components
 
 ## Theming and Styling
 

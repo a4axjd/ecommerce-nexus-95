@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -20,10 +21,13 @@ import {
   Phone,
   ShieldCheck, 
   ShoppingBag, 
-  Trash 
+  Trash,
+  Banknote
 } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { formatPrice } from "@/lib/storeSettings";
 
 const steps = ["Cart", "Shipping", "Payment", "Confirmation"];
 
@@ -47,6 +51,7 @@ const Checkout = () => {
   const { state: cartState, updateQuantity, removeFromCart, clearCart } = useCart();
   const { data: allProducts = [] } = useProducts();
   const { currentUser } = useAuth(); // Get the current user
+  const { settings } = useStoreSettings(); // Get store settings
   
   // Get suggested products based on cart items (different category)
   const cartCategories = Array.from(
@@ -91,7 +96,18 @@ const Checkout = () => {
   const handlePaymentSuccess = () => {
     // Get the selected payment method based on the active tab
     const paymentMethodElement = document.querySelector('[role="tabpanel"][data-state="active"]');
-    const paymentMethod = paymentMethodElement?.id === "card" ? "Credit Card" : "PayPal";
+    let paymentMethod = "Credit Card"; // Default
+    
+    if (paymentMethodElement?.id === "card") {
+      paymentMethod = "Credit Card";
+    } else if (paymentMethodElement?.id === "paypal") {
+      paymentMethod = "PayPal";
+    } else if (paymentMethodElement?.id === "cod") {
+      paymentMethod = "Cash on Delivery";
+    }
+    
+    // Clear the cart
+    clearCart();
     
     // Navigate to confirmation with order details
     navigate("/order-confirmation", {
@@ -181,9 +197,9 @@ const Checkout = () => {
                           <Link to={`/products/${item.id}`} className="font-medium hover:text-primary transition-colors">
                             {item.title}
                           </Link>
-                          <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
+                          <p className="font-medium">{formatPrice(item.price * item.quantity, settings)}</p>
                         </div>
-                        <p className="text-sm text-muted-foreground my-1">${item.price.toFixed(2)} each</p>
+                        <p className="text-sm text-muted-foreground my-1">{formatPrice(item.price, settings)} each</p>
                         <div className="flex justify-between mt-2">
                           <div className="flex items-center">
                             <Button
@@ -326,7 +342,7 @@ const Checkout = () => {
                       </label>
                       <Input
                         id="country"
-                        value="Saudi Arabia"
+                        value={settings.region.country}
                         readOnly
                         className="bg-muted"
                       />
@@ -407,26 +423,26 @@ const Checkout = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{formatPrice(subtotal, settings)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
-                  <span>${shipping.toFixed(2)}</span>
+                  <span>{formatPrice(shipping, settings)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>{formatPrice(tax, settings)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount</span>
-                    <span>-${discount.toFixed(2)}</span>
+                    <span>-{formatPrice(discount, settings)}</span>
                   </div>
                 )}
                 <Separator className="my-2" />
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{formatPrice(total, settings)}</span>
                 </div>
               </div>
 
@@ -465,7 +481,7 @@ const Checkout = () => {
                 <div className="flex items-center gap-3 text-sm">
                   <Home className="h-5 w-5 text-primary" />
                   <div>
-                    <strong>Shipping to:</strong> {shippingInfo.city || "United States"}
+                    <strong>Shipping to:</strong> {shippingInfo.city || settings.region.country}
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-sm">
@@ -474,12 +490,20 @@ const Checkout = () => {
                     <strong>Shipping method:</strong> Standard (3-5 business days)
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-sm">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  <div>
-                    <strong>Payment method:</strong> Credit Card / PayPal
+                {currentStep >= 2 && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-1">
+                        <CreditCard className="h-5 w-5 text-primary" />
+                        <strong>Payment:</strong> Credit Card
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Banknote className="h-5 w-5 text-primary" />
+                        <span>Cash on Delivery</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -504,7 +528,7 @@ const Checkout = () => {
                       <h4 className="text-sm font-medium line-clamp-1 group-hover:text-primary transition-colors">
                         {product.title}
                       </h4>
-                      <p className="text-sm text-muted-foreground">${product.price.toFixed(2)}</p>
+                      <p className="text-sm text-muted-foreground">{formatPrice(product.price, settings)}</p>
                     </Link>
                   ))}
                 </div>

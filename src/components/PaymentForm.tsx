@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Banknote, HomeIcon } from "lucide-react";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,7 @@ interface PaymentFormProps {
 
 export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "cod">("card");
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   
@@ -137,6 +137,35 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     return Promise.resolve();
   };
 
+  const handleCodSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    
+    // Prevent duplicate submissions
+    if (formSubmitted || isLoading || orderComplete) {
+      console.log("Preventing duplicate submission - form already submitted or order completed");
+      return;
+    }
+    
+    setIsLoading(true);
+    setFormSubmitted(true);
+    toast.info("Processing Cash on Delivery request...");
+    
+    try {
+      // Simulate processing
+      setTimeout(() => {
+        toast.success("Cash on Delivery order confirmed");
+        setIsLoading(false);
+        setOrderComplete(true);
+        onSuccess();
+      }, 1500);
+    } catch (error) {
+      console.error("COD error:", error);
+      toast.error("Order failed. Please try again.");
+      setIsLoading(false);
+      setFormSubmitted(false); // Reset to allow retry
+    }
+  };
+
   // Reset form submitted state when payment method changes
   useEffect(() => {
     setFormSubmitted(false);
@@ -162,8 +191,8 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
   };
 
   return (
-    <Tabs defaultValue="card" onValueChange={(value) => setPaymentMethod(value as "card" | "paypal")}>
-      <TabsList className="grid w-full grid-cols-2 mb-6">
+    <Tabs defaultValue="card" onValueChange={(value) => setPaymentMethod(value as "card" | "paypal" | "cod")}>
+      <TabsList className="grid w-full grid-cols-3 mb-6">
         <TabsTrigger value="card" className="flex items-center gap-2" disabled={orderComplete}>
           <CreditCard className="h-4 w-4" />
           Credit Card
@@ -174,6 +203,10 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
             <path d="M20.486 8.124c-.009-.053-.02-.106-.03-.157-.376-1.919-2.3-2.601-4.5-2.601H9.946c-.133 0-.248.074-.282.188L7.158 18.648c-.016.053.009.106.04.149.031.042.08.065.133.065h3.446l.87-5.514-.027.176c.033-.114.145-.195.28-.195h1.827c3.151 0 5.622-1.28 6.343-4.987.021-.106.036-.21.05-.313.211-1.359.011-2.283-.634-3.105l-.02-.018c.024.007.046.018.07.025z" fill="#00457C" />
           </svg>
           PayPal
+        </TabsTrigger>
+        <TabsTrigger value="cod" className="flex items-center gap-2" disabled={orderComplete}>
+          <Banknote className="h-4 w-4" />
+          Cash on Delivery
         </TabsTrigger>
       </TabsList>
 
@@ -333,6 +366,51 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
             You'll be redirected to PayPal to complete your purchase securely.
           </p>
         </PayPalScriptProvider>
+      </TabsContent>
+
+      <TabsContent value="cod" className="space-y-6">
+        {shippingInfo && renderShippingInfo()}
+        
+        <form onSubmit={handleCodSubmit} className="space-y-6">
+          <div className="p-4 bg-secondary/50 rounded-lg">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="mt-1">
+                <HomeIcon className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Cash on Delivery</p>
+                <p className="text-xs text-muted-foreground">
+                  Pay with cash when your order is delivered to your address.
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-4 text-sm">
+              <div className="flex items-start">
+                <div className="shrink-0 mr-2">•</div>
+                <p>The delivery person will collect the payment when they deliver your order.</p>
+              </div>
+              <div className="flex items-start">
+                <div className="shrink-0 mr-2">•</div>
+                <p>Please have the exact amount ready to ensure a smooth delivery process.</p>
+              </div>
+              <div className="flex items-start">
+                <div className="shrink-0 mr-2">•</div>
+                <p>You can inspect your items before making payment.</p>
+              </div>
+            </div>
+          </div>
+
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isLoading || formSubmitted || orderComplete}
+            variant="outline"
+          >
+            <Banknote className="w-4 h-4 mr-2" />
+            {isLoading ? "Processing..." : `Place Order - Pay $${amount.toFixed(2)} on Delivery`}
+          </Button>
+        </form>
       </TabsContent>
     </Tabs>
   );
