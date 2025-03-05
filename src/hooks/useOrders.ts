@@ -11,6 +11,8 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image: string;
+  color?: string;
+  size?: string;
 }
 
 export interface Order {
@@ -25,9 +27,9 @@ export interface Order {
     city: string;
     postalCode: string;
     country: string;
-    email?: string;  // Added email field
-    phone?: string;  // Added phone field
-    state?: string;  // Added state field
+    email?: string;
+    phone?: string;
+    state?: string;
   };
   paymentMethod: string;
   createdAt: number;

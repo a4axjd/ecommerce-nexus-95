@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { Check, ChevronRight, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateOrder } from "@/hooks/useOrders";
+import { useCreateOrder, Order } from "@/hooks/useOrders";
 import { useAuth } from "@/context/AuthContext";
 
 const OrderConfirmation = () => {
@@ -48,7 +48,7 @@ const OrderConfirmation = () => {
         }));
         
         // Create new order
-        const newOrder = {
+        const newOrder: Omit<Order, "id"> = {
           userId: currentUser?.uid || "guest",
           items: orderItems,
           totalAmount: orderDetails.total,
