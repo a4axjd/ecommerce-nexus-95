@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { collection, addDoc, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,17 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { useProducts, Product, ProductVariation } from "@/hooks/useProducts";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { formatPrice } from "@/lib/storeSettings";
-import { Pencil, Trash, Star, Plus, X, Settings, DollarSign, Globe } from "lucide-react";
+import { 
+  Pencil, 
+  Trash, 
+  Star, 
+  Plus, 
+  X, 
+  Settings, 
+  DollarSign, 
+  Globe,
+  ShoppingBag 
+} from "lucide-react";
 import { toast } from "sonner";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
