@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -24,13 +25,13 @@ import BlogAdmin from "./pages/BlogAdmin";
 import OrdersAdmin from "./pages/OrdersAdmin";
 import AnalyticsAdmin from "./pages/AnalyticsAdmin";
 import CouponsAdmin from "./pages/CouponsAdmin";
+import StoreSettingsAdmin from "./pages/StoreSettingsAdmin";
 import AdminSignIn from "./pages/AdminSignIn";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Blogs from "./pages/Blogs";
 import BlogPost from "./pages/BlogPost";
 import UserAccount from "./pages/UserAccount";
-import StoreSettingsAdmin from "./pages/StoreSettingsAdmin";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -118,6 +119,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <CouponsAdmin />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/admin/settings" 
+                    element={
+                      <ProtectedRoute>
+                        <StoreSettingsAdmin />
                       </ProtectedRoute>
                     } 
                   />
