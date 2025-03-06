@@ -64,7 +64,6 @@ function App() {
         <TooltipProvider>
           <CartProvider>
             <Elements stripe={stripePromise}>
-              {/* Only include the Sonner toaster, remove the shadcn/ui toaster */}
               <Sonner position="top-right" />
               <BrowserRouter>
                 <AnalyticsTracker />
@@ -78,7 +77,14 @@ function App() {
                   <Route path="/blogs/:id" element={<BlogPost />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
-                  <Route path="/account" element={<UserAccount />} />
+                  <Route 
+                    path="/account" 
+                    element={
+                      <ProtectedRoute>
+                        <UserAccount />
+                      </ProtectedRoute>
+                    } 
+                  />
                   <Route path="/sign-in" element={<SignIn />} />
                   <Route path="/sign-up" element={<SignUp />} />
                   <Route path="/admin/sign-in" element={<AdminSignIn />} />

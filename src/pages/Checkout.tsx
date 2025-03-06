@@ -94,32 +94,33 @@ const Checkout = () => {
   };
 
   const handlePaymentSuccess = () => {
+    console.log("Payment successful, preparing to navigate to order confirmation");
+    
     // Get the selected payment method based on the active tab
     const paymentMethodElement = document.querySelector('[role="tabpanel"][data-state="active"]');
     let paymentMethod = "Credit Card"; // Default
     
-    if (paymentMethodElement?.id === "card") {
-      paymentMethod = "Credit Card";
-    } else if (paymentMethodElement?.id === "paypal") {
+    if (paymentMethodElement?.id === "paypal") {
       paymentMethod = "PayPal";
     } else if (paymentMethodElement?.id === "cod") {
       paymentMethod = "Cash on Delivery";
     }
     
-    // Clear the cart
-    clearCart();
-    
     // Navigate to confirmation with order details
+    const orderDetails = {
+      shippingAddress: shippingInfo,
+      paymentMethod,
+      total,
+      date: new Date().toISOString(),
+      discount,
+      couponCode: discount > 0 ? couponCode : undefined
+    };
+    
+    console.log("Navigating to order confirmation with details:", orderDetails);
+    
     navigate("/order-confirmation", {
       state: {
-        orderDetails: {
-          shippingAddress: shippingInfo,
-          paymentMethod,
-          total,
-          date: new Date().toISOString(),
-          discount,
-          couponCode: discount > 0 ? couponCode : undefined
-        }
+        orderDetails
       }
     });
   };

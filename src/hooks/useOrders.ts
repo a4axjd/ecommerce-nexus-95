@@ -113,8 +113,15 @@ export const useCreateOrder = () => {
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
+      
+      // Return the created order with its ID
+      const createdOrder = {
+        id: docRef.id,
+        ...order
+      };
+      
       console.log("Order created with ID:", docRef.id);
-      return { id: docRef.id, ...order };
+      return createdOrder;
     },
     onSuccess: () => {
       console.log("Invalidating orders queries after successful order creation");

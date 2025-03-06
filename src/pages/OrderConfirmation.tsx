@@ -17,6 +17,7 @@ const OrderConfirmation = () => {
   const { currentUser } = useAuth();
   const { mutateAsync: createOrder } = useCreateOrder();
   const [orderProcessed, setOrderProcessed] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
   
   // Get order details from location state
   const orderDetails = location.state?.orderDetails;
@@ -44,7 +45,9 @@ const OrderConfirmation = () => {
           title: item.title,
           price: item.price,
           quantity: item.quantity,
-          image: item.image
+          image: item.image,
+          color: item.color,
+          size: item.size
         }));
         
         // Create new order
@@ -77,13 +80,14 @@ const OrderConfirmation = () => {
           newOrder.discountAmount = orderDetails.discount;
         }
         
-        // Save order to database
-        await createOrder(newOrder);
+        // Save order to database and get the returned order with ID
+        const createdOrder = await createOrder(newOrder);
+        setOrderId(createdOrder.id);
         
         // Clear cart after successful order
         clearCart();
         
-        console.log("Order created successfully!");
+        console.log("Order created successfully:", createdOrder);
         toast.success("Order placed successfully!");
       } catch (error) {
         console.error("Error creating order:", error);

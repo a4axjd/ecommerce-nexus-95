@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -7,6 +6,7 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useNavigate } from "react-router-dom";
 
 interface PaymentFormProps {
   onSuccess: () => void;
@@ -24,6 +24,7 @@ interface PaymentFormProps {
 }
 
 export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProps) => {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "cod">("card");
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -74,6 +75,11 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     }
   };
 
+  const handlePaymentSuccess = () => {
+    setOrderComplete(true);
+    onSuccess();
+  };
+
   const handleCardSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
@@ -98,8 +104,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
       setTimeout(() => {
         toast.success("Payment successful");
         setIsLoading(false);
-        setOrderComplete(true);
-        onSuccess();
+        handlePaymentSuccess();
       }, 2000);
     } catch (error) {
       console.error("Payment error:", error);
@@ -125,8 +130,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
       // For demo, we're just simulating a successful payment
       setTimeout(() => {
         toast.success("PayPal payment successful");
-        setOrderComplete(true);
-        onSuccess();
+        handlePaymentSuccess();
       }, 1500);
     } catch (error) {
       console.error("PayPal payment error:", error);
@@ -155,8 +159,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
       setTimeout(() => {
         toast.success("Cash on Delivery order confirmed");
         setIsLoading(false);
-        setOrderComplete(true);
-        onSuccess();
+        handlePaymentSuccess();
       }, 1500);
     } catch (error) {
       console.error("COD error:", error);
