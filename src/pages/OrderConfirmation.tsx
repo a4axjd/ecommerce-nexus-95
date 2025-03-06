@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { Check, ChevronRight, ShoppingBag } from "lucide-react";
+import { Check, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateOrder, Order } from "@/hooks/useOrders";
 import { useAuth } from "@/context/AuthContext";
@@ -48,7 +48,7 @@ const OrderConfirmation = () => {
           title: item.title,
           price: item.price,
           quantity: item.quantity,
-          image: item.image,
+          image: item.image || "",
           color: item.color || "",
           size: item.size || ""
         }));
@@ -60,16 +60,16 @@ const OrderConfirmation = () => {
           totalAmount: orderDetails.total,
           status: "pending" as const,
           shippingAddress: {
-            name: orderDetails.shippingAddress.name,
-            address: orderDetails.shippingAddress.address,
-            city: orderDetails.shippingAddress.city,
+            name: orderDetails.shippingAddress.name || "",
+            address: orderDetails.shippingAddress.address || "",
+            city: orderDetails.shippingAddress.city || "",
             state: orderDetails.shippingAddress.state || "",
-            postalCode: orderDetails.shippingAddress.zipCode,
-            country: orderDetails.shippingAddress.country,
+            postalCode: orderDetails.shippingAddress.zipCode || "",
+            country: orderDetails.shippingAddress.country || "",
             email: orderDetails.shippingAddress.email || "",
             phone: orderDetails.shippingAddress.phone || ""
           },
-          paymentMethod: orderDetails.paymentMethod,
+          paymentMethod: orderDetails.paymentMethod || "card",
           createdAt: Date.now(),
           updatedAt: Date.now()
         };
@@ -103,7 +103,7 @@ const OrderConfirmation = () => {
     createNewOrder();
   }, [orderDetails, cartState, navigate, clearCart, createOrder, currentUser?.uid, orderProcessed]);
   
-  // If no order details, show loading
+  // If no order details, show loading or redirect
   if (!orderDetails) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -130,6 +130,11 @@ const OrderConfirmation = () => {
             <p className="text-muted-foreground">
               Thank you for your purchase. Your order has been placed successfully.
             </p>
+            {orderId && (
+              <p className="text-sm font-medium mt-2">
+                Order ID: {orderId}
+              </p>
+            )}
           </div>
           
           <div className="bg-white p-6 rounded-lg border mb-8">
@@ -138,7 +143,7 @@ const OrderConfirmation = () => {
             <div className="grid gap-y-2">
               <div className="flex justify-between py-2 border-b">
                 <span className="text-muted-foreground">Order Date</span>
-                <span>{new Date(orderDetails.date).toLocaleDateString()}</span>
+                <span>{new Date().toLocaleDateString()}</span>
               </div>
               
               <div className="flex justify-between py-2 border-b">
@@ -225,16 +230,12 @@ const OrderConfirmation = () => {
           </div>
           
           <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <Button variant="outline" asChild>
-              <a href="/account">
-                View Order History
-              </a>
+            <Button variant="outline" onClick={() => navigate("/account")}>
+              View Order History
             </Button>
-            <Button asChild>
-              <a href="/products">
-                <ShoppingBag className="mr-2 h-4 w-4" />
-                Continue Shopping
-              </a>
+            <Button onClick={() => navigate("/products")}>
+              <ShoppingBag className="mr-2 h-4 w-4" />
+              Continue Shopping
             </Button>
           </div>
         </div>

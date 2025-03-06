@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
+import { trackOrderCompletion } from "@/hooks/useAnalytics";
 
 export interface OrderItem {
   id: string;
@@ -171,11 +172,16 @@ export const useCreateOrder = () => {
         updatedAt: Date.now(),
       });
       
+      // Track order completion for analytics
+      await trackOrderCompletion();
+      
       // Return the created order with its ID
       const createdOrder = {
         id: docRef.id,
-        ...cleanedOrder
-      };
+        ...cleanedOrder,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      } as Order;
       
       console.log("Order created with ID:", docRef.id);
       return createdOrder;
