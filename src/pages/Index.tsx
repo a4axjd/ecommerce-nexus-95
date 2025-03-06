@@ -13,16 +13,19 @@ import {
   BookOpen,
   Star,
   Sparkles,
-  ShoppingCart
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useFeaturedProducts, useProducts } from "@/hooks/useProducts";
 import { useFeaturedBlogs } from "@/hooks/useBlogs";
+import { HeroCarousel } from "@/components/HeroCarousel";
+import { TrendingProducts } from "@/components/TrendingProducts";
+import { InstagramFeed } from "@/components/InstagramFeed";
+import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 const CATEGORIES = [
   {
-    name: "Clothing",
-    image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&auto=format&fit=crop&q=60",
+    name: "Streetwear",
+    image: "https://images.unsplash.com/photo-1552346154-21d32810aba3?w=800&auto=format&fit=crop&q=60",
   },
   {
     name: "Accessories",
@@ -63,12 +66,27 @@ const Index = () => {
   const { data: featuredBlogs, isLoading: blogsLoading } = useFeaturedBlogs();
   const { data: allProducts = [] } = useProducts();
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
+  const [showNewsletter, setShowNewsletter] = useState(false);
   
   // Get recently viewed products from localStorage
   useEffect(() => {
     const storedRecent = localStorage.getItem('recentlyViewed');
     if (storedRecent) {
       setRecentlyViewed(JSON.parse(storedRecent));
+    }
+  }, []);
+  
+  // Show newsletter popup after 5 seconds
+  useEffect(() => {
+    const hasSeenPopup = localStorage.getItem('hasSeenNewsletterPopup');
+    
+    if (!hasSeenPopup) {
+      const timer = setTimeout(() => {
+        setShowNewsletter(true);
+        localStorage.setItem('hasSeenNewsletterPopup', 'true');
+      }, 5000);
+      
+      return () => clearTimeout(timer);
     }
   }, []);
   
@@ -82,38 +100,9 @@ const Index = () => {
       <Navbar />
       
       <main className="flex-grow">
-        {/* Hero Section */}
-        <section className="relative h-screen max-h-[800px] min-h-[600px]">
-          <div className="relative h-full w-full flex items-center justify-center">
-            <div 
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: "url(https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1600&auto=format&fit=crop&q=60)" }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30" />
-            </div>
-            
-            <div className="container mx-auto px-4 relative z-10 text-left md:text-center">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-white max-w-3xl mx-auto animate-fade-in">
-                Elevate Your Style with Our Collection
-              </h1>
-              <p className="text-lg md:text-xl text-gray-100 mb-8 max-w-2xl mx-auto animate-fade-in">
-                Discover premium quality products curated for the modern lifestyle
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link to="/products">
-                  <Button size="lg" className="animate-slide-in text-lg px-8 py-6 h-auto font-semibold group w-full sm:w-auto">
-                    Shop Now
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
-                <Link to="/about">
-                  <Button size="lg" variant="outline" className="animate-slide-in text-lg px-8 py-6 h-auto font-semibold bg-white/10 text-white border-white/30 hover:bg-white/20 w-full sm:w-auto">
-                    Learn More
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
+        {/* Hero Carousel Section */}
+        <section>
+          <HeroCarousel />
         </section>
 
         {/* Features Section */}
@@ -144,6 +133,9 @@ const Index = () => {
             </div>
           </div>
         </section>
+
+        {/* Trending Products Section */}
+        <TrendingProducts />
 
         {/* Recently Viewed */}
         {recentlyViewedProducts.length > 0 && (
@@ -197,7 +189,7 @@ const Index = () => {
             <div className="text-center mt-10">
               <Button asChild size="lg">
                 <Link to="/products" className="inline-flex items-center">
-                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  <ShoppingBag className="mr-2 h-5 w-5" />
                   Shop All Products
                 </Link>
               </Button>
@@ -240,8 +232,21 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Testimonials Section */}
+        {/* Instagram Feed Section */}
         <section className="py-16 bg-white">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl font-bold mb-4">Style Inspiration</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Check out how our community styles Nytheris pieces
+              </p>
+            </div>
+            <InstagramFeed />
+          </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section className="py-16 bg-secondary/20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-10">
               <h2 className="text-3xl font-bold mb-4">What Our Customers Say</h2>
@@ -251,7 +256,7 @@ const Index = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {TESTIMONIALS.map((testimonial, i) => (
-                <div key={i} className="bg-secondary/20 rounded-lg p-6 shadow-sm border">
+                <div key={i} className="bg-white rounded-lg p-6 shadow-sm border">
                   <div className="flex items-center gap-2 mb-3">
                     {[...Array(5)].map((_, idx) => (
                       <Star key={idx} className={`h-4 w-4 ${idx < testimonial.rating ? 'text-amber-500' : 'text-gray-300'}`} fill={idx < testimonial.rating ? 'currentColor' : 'none'} />
@@ -290,7 +295,12 @@ const Index = () => {
                   placeholder="Enter your email"
                   className="flex-1 px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-primary/30"
                 />
-                <Button size="lg">Subscribe</Button>
+                <Button 
+                  size="lg"
+                  onClick={() => setShowNewsletter(true)}
+                >
+                  Subscribe
+                </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-4">
                 By subscribing, you agree to our Privacy Policy and consent to receive updates from our company.
@@ -367,6 +377,12 @@ const Index = () => {
       </main>
 
       <Footer />
+      
+      {/* Newsletter Popup */}
+      <NewsletterSignup 
+        isOpen={showNewsletter} 
+        onClose={() => setShowNewsletter(false)} 
+      />
     </div>
   );
 };

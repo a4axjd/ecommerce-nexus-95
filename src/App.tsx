@@ -57,7 +57,24 @@ const AnalyticsTracker = () => {
   return null;
 };
 
+// Add Nytheris theme
+const applyNytherisTheme = () => {
+  // Update the document title
+  document.title = "Nytheris | Modern Streetwear from Pakistan";
+  
+  // Update theme colors
+  document.documentElement.style.setProperty('--primary', '24 9.8% 10%');
+  document.documentElement.style.setProperty('--primary-foreground', '60 9.1% 97.8%');
+  document.documentElement.style.setProperty('--secondary', '60 4.8% 95.9%');
+  document.documentElement.style.setProperty('--secondary-foreground', '24 9.8% 10%');
+};
+
 function App() {
+  // Apply theme when app loads
+  useEffect(() => {
+    applyNytherisTheme();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
