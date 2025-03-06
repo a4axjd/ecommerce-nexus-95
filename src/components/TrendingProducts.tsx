@@ -27,8 +27,11 @@ export const TrendingProducts = () => {
         // Generate a "score" that would normally be based on real metrics
         const viewsWeight = Math.random() * 10; // Simulated view count importance
         const salesWeight = Math.random() * 15; // Simulated sales importance
-        const newness = (Date.now() - new Date(product.createdAt || Date.now()).getTime()) / (1000 * 60 * 60 * 24);
-        const newnessWeight = newness < 30 ? (30 - newness) / 3 : 0; // Newer products get a boost
+        
+        // Fix: Use product ID or another existing property instead of createdAt
+        // Assume more recent products have higher IDs (common in databases)
+        const productIdAsNumber = parseInt(product.id.replace(/\D/g, '')) || 0;
+        const newnessWeight = Math.min(productIdAsNumber / 100, 10); // Normalize to a reasonable range
         
         return {
           ...product,
