@@ -52,6 +52,11 @@ export const AdminSidebar = () => {
       icon: BookText,
       path: "/admin/blogs",
     },
+    {
+      title: "Store Settings",
+      icon: Settings,
+      path: "/admin/settings",
+    },
   ];
 
   return (
