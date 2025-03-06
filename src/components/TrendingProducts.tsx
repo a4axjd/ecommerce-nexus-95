@@ -3,34 +3,73 @@ import { useState, useEffect } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductCard } from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowRight, RefreshCw, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 export const TrendingProducts = () => {
   const { data: products = [], isLoading } = useProducts();
   const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   
-  // Simulate trending products calculation
+  // Calculate trending products (more sophisticated algorithm)
+  const calculateTrending = () => {
+    if (products.length) {
+      // In a real app, this would take into account:
+      // - Recent views
+      // - Purchase frequency
+      // - Stock levels
+      // - Seasonal relevance
+      // - etc.
+      
+      // For now, we'll simulate a more intelligent algorithm:
+      const weightedProducts = products.map(product => {
+        // Generate a "score" that would normally be based on real metrics
+        const viewsWeight = Math.random() * 10; // Simulated view count importance
+        const salesWeight = Math.random() * 15; // Simulated sales importance
+        const newness = (Date.now() - new Date(product.createdAt || Date.now()).getTime()) / (1000 * 60 * 60 * 24);
+        const newnessWeight = newness < 30 ? (30 - newness) / 3 : 0; // Newer products get a boost
+        
+        return {
+          ...product,
+          trendingScore: viewsWeight + salesWeight + newnessWeight
+        };
+      });
+      
+      // Sort by the calculated trending score
+      const sorted = [...weightedProducts].sort((a, b) => b.trendingScore - a.trendingScore);
+      setTrendingProducts(sorted.slice(0, 4)); // Get top 4
+      setLastUpdated(new Date());
+    }
+  };
+
+  // Initial calculation when products load
   useEffect(() => {
     if (products.length) {
-      // Normally this would be based on sales data, views, etc.
-      // For now we'll just randomly select 4 products
-      const shuffled = [...products].sort(() => 0.5 - Math.random());
-      setTrendingProducts(shuffled.slice(0, 4));
+      calculateTrending();
     }
   }, [products]);
 
-  // Auto-refresh trending products every 5 minutes
+  // Auto-refresh trending products every hour instead of every 5 minutes
   useEffect(() => {
     const interval = setInterval(() => {
       if (products.length) {
-        const shuffled = [...products].sort(() => 0.5 - Math.random());
-        setTrendingProducts(shuffled.slice(0, 4));
+        calculateTrending();
+        console.log("Auto-refreshed trending products");
       }
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 60 * 60 * 1000); // Every hour
     
     return () => clearInterval(interval);
   }, [products]);
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    calculateTrending();
+    toast.success("Trending products updated!", { 
+      duration: 3000,
+      position: "bottom-right"
+    });
+  };
 
   return (
     <section className="py-16 bg-white">
@@ -40,9 +79,20 @@ export const TrendingProducts = () => {
             <TrendingUp className="h-6 w-6 text-primary" />
             <h2 className="text-2xl font-bold">Trending Now</h2>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Updated {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-          </p>
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={handleRefresh} 
+              variant="ghost" 
+              size="sm"
+              className="gap-1"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Refresh</span>
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Updated {lastUpdated.toLocaleDateString()} at {lastUpdated.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+            </p>
+          </div>
         </div>
         
         {isLoading ? (
