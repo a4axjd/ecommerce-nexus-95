@@ -25,18 +25,21 @@ const OrderConfirmation = () => {
   useEffect(() => {
     // If no order details or cart is empty, redirect to home
     if (!orderDetails || cartState.items.length === 0) {
+      console.log("No order details or empty cart, redirecting to home");
       navigate("/");
       return;
     }
     
     // Prevent duplicate order creation
     if (orderProcessed) {
+      console.log("Order already processed, skipping creation");
       return;
     }
     
     const createNewOrder = async () => {
       try {
         setOrderProcessed(true);
+        console.log("Starting order creation process");
         
         // Create order items from cart items
         const orderItems = cartState.items.map(item => ({
@@ -46,11 +49,11 @@ const OrderConfirmation = () => {
           price: item.price,
           quantity: item.quantity,
           image: item.image,
-          color: item.color,
-          size: item.size
+          color: item.color || "",
+          size: item.size || ""
         }));
         
-        // Create new order
+        // Create new order with required fields
         const newOrder: Omit<Order, "id"> = {
           userId: currentUser?.uid || "guest",
           items: orderItems,
@@ -63,8 +66,8 @@ const OrderConfirmation = () => {
             state: orderDetails.shippingAddress.state || "",
             postalCode: orderDetails.shippingAddress.zipCode,
             country: orderDetails.shippingAddress.country,
-            email: orderDetails.shippingAddress.email,
-            phone: orderDetails.shippingAddress.phone
+            email: orderDetails.shippingAddress.email || "",
+            phone: orderDetails.shippingAddress.phone || ""
           },
           paymentMethod: orderDetails.paymentMethod,
           createdAt: Date.now(),
@@ -80,14 +83,15 @@ const OrderConfirmation = () => {
           newOrder.discountAmount = orderDetails.discount;
         }
         
+        console.log("Submitting order to database:", newOrder);
         // Save order to database and get the returned order with ID
         const createdOrder = await createOrder(newOrder);
+        console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
         
         // Clear cart after successful order
         clearCart();
         
-        console.log("Order created successfully:", createdOrder);
         toast.success("Order placed successfully!");
       } catch (error) {
         console.error("Error creating order:", error);
@@ -101,7 +105,15 @@ const OrderConfirmation = () => {
   
   // If no order details, show loading
   if (!orderDetails) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center">
+          <p>Loading order details...</p>
+        </div>
+        <Footer />
+      </div>
+    );
   }
   
   return (

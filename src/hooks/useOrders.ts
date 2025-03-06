@@ -38,6 +38,30 @@ export interface Order {
   discountAmount?: number;
 }
 
+// Helper function to clean undefined values from objects
+const removeUndefinedValues = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefinedValues(item));
+  }
+
+  // Handle objects
+  const cleanedObj: any = {};
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined) {
+      cleanedObj[key] = typeof obj[key] === 'object' 
+        ? removeUndefinedValues(obj[key]) 
+        : obj[key];
+    }
+  });
+  
+  return cleanedObj;
+};
+
 export const useOrders = () => {
   return useQuery({
     queryKey: ["orders"],
@@ -108,8 +132,41 @@ export const useCreateOrder = () => {
   return useMutation({
     mutationFn: async (order: Omit<Order, "id">) => {
       console.log("Creating new order:", order);
+      
+      // Clean order of undefined values before saving to Firestore
+      const cleanedOrder = removeUndefinedValues(order);
+      
+      // Validate required fields to prevent undefined values
+      if (!cleanedOrder.userId) {
+        throw new Error("Order must have a user ID");
+      }
+      
+      if (!cleanedOrder.items || !Array.isArray(cleanedOrder.items) || cleanedOrder.items.length === 0) {
+        throw new Error("Order must have at least one item");
+      }
+      
+      if (typeof cleanedOrder.totalAmount !== 'number') {
+        throw new Error("Order must have a valid total amount");
+      }
+      
+      if (!cleanedOrder.shippingAddress || !cleanedOrder.shippingAddress.name) {
+        throw new Error("Order must have valid shipping address information");
+      }
+      
+      if (!cleanedOrder.paymentMethod) {
+        throw new Error("Order must have a payment method");
+      }
+      
+      // Ensure all order items have required fields
+      cleanedOrder.items.forEach((item, index) => {
+        if (!item.id || !item.productId || !item.title || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
+          throw new Error(`Invalid item at index ${index}`);
+        }
+      });
+      
+      // Create the document with clean data
       const docRef = await addDoc(collection(db, "orders"), {
-        ...order,
+        ...cleanedOrder,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
@@ -117,7 +174,7 @@ export const useCreateOrder = () => {
       // Return the created order with its ID
       const createdOrder = {
         id: docRef.id,
-        ...order
+        ...cleanedOrder
       };
       
       console.log("Order created with ID:", docRef.id);

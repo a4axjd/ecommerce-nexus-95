@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -76,7 +77,9 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
   };
 
   const handlePaymentSuccess = () => {
+    console.log("Payment successful, completing order");
     setOrderComplete(true);
+    // Ensure we call onSuccess to navigate to order confirmation page
     onSuccess();
   };
 
@@ -102,6 +105,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     try {
       // Simulate processing (in a real app this would be handled by a payment processor)
       setTimeout(() => {
+        console.log("Card payment processed successfully");
         toast.success("Payment successful");
         setIsLoading(false);
         handlePaymentSuccess();
@@ -129,6 +133,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
       // In a real implementation, you would verify the payment with your backend
       // For demo, we're just simulating a successful payment
       setTimeout(() => {
+        console.log("PayPal payment processed successfully");
         toast.success("PayPal payment successful");
         handlePaymentSuccess();
       }, 1500);
@@ -157,6 +162,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     try {
       // Simulate processing
       setTimeout(() => {
+        console.log("Cash on Delivery processed successfully");
         toast.success("Cash on Delivery order confirmed");
         setIsLoading(false);
         handlePaymentSuccess();
