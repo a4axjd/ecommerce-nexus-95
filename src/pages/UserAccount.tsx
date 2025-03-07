@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,6 @@ const UserAccount = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   
-  // Fetch user's orders with real-time updates
   const { data: orders = [], isLoading: isOrdersLoading } = useUserOrders();
 
   useEffect(() => {
@@ -39,11 +37,9 @@ const UserAccount = () => {
     const fetchWishlist = async () => {
       setIsLoading(true);
       try {
-        // Fetch user document to get wishlist IDs
         const userRef = doc(db, "users", currentUser.uid);
         const userSnap = await getDoc(userRef);
         
-        // Create user document if it doesn't exist
         if (!userSnap.exists()) {
           await setDoc(userRef, {
             email: currentUser.email,
@@ -58,7 +54,6 @@ const UserAccount = () => {
         const userData = userSnap.data();
         const wishlistIds = userData.wishlist || [];
         
-        // Fetch product details for each ID in wishlist
         const productsData: WishlistProduct[] = [];
         
         for (const productId of wishlistIds) {
@@ -115,15 +110,13 @@ const UserAccount = () => {
   };
 
   if (!currentUser) {
-    return null; // Navigate handles the redirect
+    return null;
   }
 
-  // Helper function to format date
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString();
   };
 
-  // Helper function to get badge color for order status
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'pending':
@@ -141,7 +134,6 @@ const UserAccount = () => {
     }
   };
 
-  // Helper function to get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'pending':
@@ -159,6 +151,8 @@ const UserAccount = () => {
     }
   };
 
+  console.log("Current orders in UserAccount:", orders);
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -166,7 +160,6 @@ const UserAccount = () => {
       <main className="flex-grow pt-24 pb-16">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-8">
-            {/* Sidebar */}
             <div className="w-full md:w-64 space-y-2">
               <Button
                 variant={activeTab === "profile" ? "default" : "outline"}
@@ -215,7 +208,6 @@ const UserAccount = () => {
               </Button>
             </div>
             
-            {/* Content */}
             <div className="flex-1 bg-white p-6 rounded-lg shadow-sm border">
               {activeTab === "profile" && (
                 <div>
@@ -281,18 +273,10 @@ const UserAccount = () => {
                         </div>
                       ))}
                     </div>
-                  ) : orders.length === 0 ? (
-                    <div className="text-center py-8 border rounded-md">
-                      <p className="text-muted-foreground">You haven't placed any orders yet</p>
-                      <Button className="mt-4" onClick={() => navigate("/products")}>
-                        Browse Products
-                      </Button>
-                    </div>
-                  ) : (
+                  ) : orders && orders.length > 0 ? (
                     <div className="space-y-4">
                       {orders.map((order) => (
                         <div key={order.id} className="border rounded-lg overflow-hidden">
-                          {/* Order header */}
                           <div className="bg-gray-50 p-4 border-b">
                             <div className="flex flex-wrap justify-between items-center gap-2">
                               <div>
@@ -309,7 +293,6 @@ const UserAccount = () => {
                             </div>
                           </div>
                           
-                          {/* Order items */}
                           <div className="p-4">
                             <h3 className="font-medium text-sm mb-3">Items</h3>
                             <div className="space-y-3">
@@ -334,10 +317,8 @@ const UserAccount = () => {
                             </div>
                           </div>
                           
-                          {/* Order footer with status tracking */}
                           <div className="bg-gray-50 p-4 border-t">
                             <div className="flex flex-col space-y-4">
-                              {/* Status tracking */}
                               <div className="w-full">
                                 <div className="relative">
                                   <div className="flex items-center justify-between mb-2">
@@ -397,6 +378,13 @@ const UserAccount = () => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 border rounded-md">
+                      <p className="text-muted-foreground">You haven't placed any orders yet</p>
+                      <Button className="mt-4" onClick={() => navigate("/products")}>
+                        Browse Products
+                      </Button>
                     </div>
                   )}
                 </div>

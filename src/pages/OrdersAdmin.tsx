@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,12 +40,9 @@ const OrdersAdmin = () => {
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [lastChecked, setLastChecked] = useState<number>(Date.now());
   
-  // Set up real-time listener for new orders
   useEffect(() => {
-    // Get timestamp for "last checked"
     const lastCheckedTime = new Date(lastChecked);
     
-    // Set up listener for new orders
     const q = query(
       collection(db, "orders"),
       where("createdAt", ">", lastCheckedTime.getTime()),
@@ -57,7 +53,6 @@ const OrdersAdmin = () => {
       const newOrders = snapshot.docs.length;
       
       if (newOrders > 0 && lastChecked > 0) {
-        // Only show notification if this isn't the first load
         setNewOrdersCount(prevCount => prevCount + newOrders);
         toast.info(`${newOrders} new order${newOrders > 1 ? 's' : ''} received!`, {
           action: {
@@ -74,11 +69,9 @@ const OrdersAdmin = () => {
       console.error("Error setting up order listener:", error);
     });
     
-    // Clean up listener
     return () => unsubscribe();
   }, [lastChecked, refetch]);
   
-  // Filter orders based on search and status
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
       searchQuery === "" || 
@@ -94,6 +87,8 @@ const OrdersAdmin = () => {
     try {
       await updateOrderStatus.mutateAsync({ id: orderId, status: newStatus });
       toast.success(`Order status updated to ${newStatus}`);
+      
+      refetch();
     } catch (error) {
       console.error("Error updating order status:", error);
       toast.error("Failed to update order status");
@@ -129,7 +124,6 @@ const OrdersAdmin = () => {
     toast.success("Orders refreshed");
   };
 
-  // Format date with exact time
   const formatDateTime = (timestamp: number) => {
     return format(new Date(timestamp), 'MMM dd, yyyy HH:mm:ss');
   };
@@ -166,7 +160,6 @@ const OrdersAdmin = () => {
           </div>
 
           <div className="space-y-6">
-            {/* Filters and Search */}
             <div className="flex flex-col md:flex-row gap-4 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -195,7 +188,6 @@ const OrdersAdmin = () => {
               </Select>
             </div>
 
-            {/* Orders Table */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
               {isLoading ? (
                 <div className="flex justify-center items-center p-8">
@@ -278,7 +270,6 @@ const OrdersAdmin = () => {
         </div>
       </main>
 
-      {/* Order Details Dialog */}
       <Dialog open={orderDetailsOpen} onOpenChange={setOrderDetailsOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>

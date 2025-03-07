@@ -106,7 +106,7 @@ export const useUserOrders = () => {
   const [ordersRealtime, setOrdersRealtime] = useState<Order[]>([]);
   const [isRealtimeReady, setIsRealtimeReady] = useState(false);
   
-  // This will fetch orders with regular React Query
+  // This will fetch orders with regular React Query for initial data
   const result = useQuery({
     queryKey: ["userOrders", currentUser?.uid],
     queryFn: async () => {
@@ -135,11 +135,10 @@ export const useUserOrders = () => {
     if (!currentUser) {
       setOrdersRealtime([]);
       setIsRealtimeReady(false);
-      return;
+      return () => {};
     }
     
     console.log("Setting up real-time order listener for user:", currentUser.uid);
-    setIsRealtimeReady(false);
     
     const q = query(
       collection(db, "orders"),
@@ -171,7 +170,7 @@ export const useUserOrders = () => {
   // Return real-time data if available, otherwise fall back to React Query data
   return {
     ...result,
-    data: isRealtimeReady ? ordersRealtime : result.data || [],
+    data: isRealtimeReady ? ordersRealtime : result.data,
     isLoading: result.isLoading && !isRealtimeReady,
   };
 };
@@ -235,11 +234,17 @@ export const useCreateOrder = () => {
       console.log("Order created with ID:", docRef.id);
       return createdOrder;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       console.log("Invalidating orders queries after successful order creation");
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["userOrders"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      
+      // Force update user orders collection
+      queryClient.setQueryData(["userOrders", data.userId], (oldData: Order[] | undefined) => {
+        if (!oldData) return [data];
+        return [data, ...oldData];
+      });
     },
   });
 };
