@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -34,16 +33,19 @@ const steps = ["Cart", "Shipping", "Payment", "Confirmation"];
 const Checkout = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0); // Start at cart step
+  const { settings } = useStoreSettings(); // Get store settings
+
   const [shippingInfo, setShippingInfo] = useState({
     name: "",
     address: "",
     city: "",
     state: "",
     zipCode: "",
-    country: "Saudi Arabia",
+    country: settings.region.country, // Use country from store settings
     phone: "",
-    email: "", // Add email field
+    email: "",
   });
+
   const [couponCode, setCouponCode] = useState("");
   const [isApplying, setIsApplying] = useState(false);
   const [discount, setDiscount] = useState(0);
@@ -51,8 +53,15 @@ const Checkout = () => {
   const { state: cartState, updateQuantity, removeFromCart, clearCart } = useCart();
   const { data: allProducts = [] } = useProducts();
   const { currentUser } = useAuth(); // Get the current user
-  const { settings } = useStoreSettings(); // Get store settings
   
+  // Update shipping country when store settings change
+  useEffect(() => {
+    setShippingInfo(prev => ({
+      ...prev,
+      country: settings.region.country
+    }));
+  }, [settings.region.country]);
+
   // Get suggested products based on cart items (different category)
   const cartCategories = Array.from(
     new Set(cartState.items.map(item => {
@@ -344,8 +353,8 @@ const Checkout = () => {
                       <Input
                         id="country"
                         value={settings.region.country}
-                        readOnly
-                        className="bg-muted"
+                        onChange={(e) => setShippingInfo({...shippingInfo, country: e.target.value})}
+                        className="bg-white"
                       />
                     </div>
                   </div>

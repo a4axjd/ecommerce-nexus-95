@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -8,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
 
 interface PaymentFormProps {
   onSuccess: () => void;
@@ -30,6 +30,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
   const [paymentMethod, setPaymentMethod] = useState<"card" | "paypal" | "cod">("card");
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const { settings } = useStoreSettings();
   
   // For manual card input form
   const [cardInfo, setCardInfo] = useState({
@@ -80,7 +81,9 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     console.log("Payment successful, completing order");
     setOrderComplete(true);
     // Ensure we call onSuccess to navigate to order confirmation page
-    onSuccess();
+    setTimeout(() => {
+      onSuccess();
+    }, 100);
   };
 
   const handleCardSubmit = async (event: React.FormEvent) => {
@@ -179,6 +182,12 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
   useEffect(() => {
     setFormSubmitted(false);
   }, [paymentMethod]);
+
+  // Get country code for PayPal
+  const getCountryCode = () => {
+    // Default to US if not found
+    return settings.region.countryCode || "US";
+  };
 
   // Display information about shipped to address when using PayPal
   const renderShippingInfo = () => {
@@ -306,7 +315,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
         
         <PayPalScriptProvider options={{ 
           clientId: "AZLbo88PLuakr0L4eyq_gPT0Yk24QFWrw4GIJbSD9UfUF9xtC5jGm8Qe9lSZUPIyKKgdSLSKLa1BqLYB",
-          currency: "USD",
+          currency: settings.currency.code,
           intent: "capture"
         }}>
           {!orderComplete && !formSubmitted && (
@@ -324,7 +333,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
                     {
                       amount: {
                         value: amount.toString(),
-                        currency_code: "USD"
+                        currency_code: settings.currency.code
                       },
                       shipping: shippingInfo ? {
                         name: {
@@ -335,7 +344,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
                           admin_area_2: shippingInfo.city,
                           admin_area_1: shippingInfo.state,
                           postal_code: shippingInfo.zipCode,
-                          country_code: "SA" // Saudi Arabia country code
+                          country_code: getCountryCode()
                         }
                       } : undefined
                     }
@@ -351,7 +360,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
                       phone_type: "MOBILE",
                       phone_number: {
                         national_number: shippingInfo.phone.replace(/\D/g, ''),
-                        country_code: "966" // Saudi Arabia country code
+                        country_code: settings.region.countryCode === 'SA' ? '966' : '1'
                       }
                     }
                   } : undefined

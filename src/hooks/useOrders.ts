@@ -104,6 +104,7 @@ export const useOrder = (id: string) => {
 export const useUserOrders = () => {
   const { currentUser } = useAuth();
   const [ordersRealtime, setOrdersRealtime] = useState<Order[]>([]);
+  const [isRealtimeReady, setIsRealtimeReady] = useState(false);
   
   // This will fetch orders with regular React Query
   const result = useQuery({
@@ -131,9 +132,14 @@ export const useUserOrders = () => {
   
   // Setup real-time listener for the user's orders
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setOrdersRealtime([]);
+      setIsRealtimeReady(false);
+      return;
+    }
     
     console.log("Setting up real-time order listener for user:", currentUser.uid);
+    setIsRealtimeReady(false);
     
     const q = query(
       collection(db, "orders"),
@@ -147,10 +153,12 @@ export const useUserOrders = () => {
         ...doc.data()
       })) as Order[];
       
-      console.log("Real-time order update:", updatedOrders);
+      console.log("Real-time order update received, orders count:", updatedOrders.length);
       setOrdersRealtime(updatedOrders);
+      setIsRealtimeReady(true);
     }, (error) => {
       console.error("Error in real-time order listener:", error);
+      setIsRealtimeReady(false);
     });
     
     // Clean up listener on unmount
@@ -163,7 +171,8 @@ export const useUserOrders = () => {
   // Return real-time data if available, otherwise fall back to React Query data
   return {
     ...result,
-    data: ordersRealtime.length > 0 ? ordersRealtime : result.data,
+    data: isRealtimeReady ? ordersRealtime : result.data || [],
+    isLoading: result.isLoading && !isRealtimeReady,
   };
 };
 
