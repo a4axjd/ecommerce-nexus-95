@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -27,7 +27,7 @@ import { Search, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AdminSidebar } from "@/components/AdminSidebar";
-import { collection, onSnapshot, query, orderBy, where, Timestamp } from "firebase/firestore";
+import { collection, onSnapshot, query, orderBy, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const OrdersAdmin = () => {
@@ -39,9 +39,15 @@ const OrdersAdmin = () => {
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [lastChecked, setLastChecked] = useState<number>(Date.now());
+  const newOrdersListenerRef = useRef<() => void | null>();
   
   useEffect(() => {
     const lastCheckedTime = new Date(lastChecked);
+    
+    if (newOrdersListenerRef.current) {
+      newOrdersListenerRef.current();
+      newOrdersListenerRef.current = undefined;
+    }
     
     const q = query(
       collection(db, "orders"),
@@ -69,7 +75,14 @@ const OrdersAdmin = () => {
       console.error("Error setting up order listener:", error);
     });
     
-    return () => unsubscribe();
+    newOrdersListenerRef.current = unsubscribe;
+    
+    return () => {
+      if (newOrdersListenerRef.current) {
+        newOrdersListenerRef.current();
+        newOrdersListenerRef.current = undefined;
+      }
+    };
   }, [lastChecked, refetch]);
   
   const filteredOrders = orders.filter(order => {

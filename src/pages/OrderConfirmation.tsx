@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -18,6 +17,7 @@ const OrderConfirmation = () => {
   const { mutateAsync: createOrder } = useCreateOrder();
   const [orderProcessed, setOrderProcessed] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Get order details from location state
   const orderDetails = location.state?.orderDetails;
@@ -38,6 +38,8 @@ const OrderConfirmation = () => {
     
     const createNewOrder = async () => {
       try {
+        // Set loading and processed state immediately to prevent duplicate submissions
+        setIsLoading(true);
         setOrderProcessed(true);
         console.log("Starting order creation process");
         
@@ -97,6 +99,8 @@ const OrderConfirmation = () => {
         console.error("Error creating order:", error);
         toast.error("Failed to create order: " + (error instanceof Error ? error.message : String(error)));
         setOrderProcessed(false);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -134,6 +138,11 @@ const OrderConfirmation = () => {
               <p className="text-sm font-medium mt-2">
                 Order ID: {orderId}
               </p>
+            )}
+            {isLoading && (
+              <div className="flex justify-center mt-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
             )}
           </div>
           

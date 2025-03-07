@@ -1,10 +1,9 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { trackOrderCompletion } from "@/hooks/useAnalytics";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export interface OrderItem {
   id: string;
@@ -40,18 +39,15 @@ export interface Order {
   discountAmount?: number;
 }
 
-// Helper function to clean undefined values from objects
 const removeUndefinedValues = (obj: any): any => {
   if (obj === null || typeof obj !== 'object') {
     return obj;
   }
 
-  // Handle arrays
   if (Array.isArray(obj)) {
     return obj.map(item => removeUndefinedValues(item));
   }
 
-  // Handle objects
   const cleanedObj: any = {};
   Object.keys(obj).forEach(key => {
     if (obj[key] !== undefined) {
@@ -105,8 +101,8 @@ export const useUserOrders = () => {
   const { currentUser } = useAuth();
   const [ordersRealtime, setOrdersRealtime] = useState<Order[]>([]);
   const [isRealtimeReady, setIsRealtimeReady] = useState(false);
+  const unsubscribeRef = useRef<() => void | null>();
   
-  // This will fetch orders with regular React Query for initial data
   const result = useQuery({
     queryKey: ["userOrders", currentUser?.uid],
     queryFn: async () => {
@@ -130,12 +126,16 @@ export const useUserOrders = () => {
     enabled: !!currentUser,
   });
   
-  // Setup real-time listener for the user's orders
   useEffect(() => {
     if (!currentUser) {
       setOrdersRealtime([]);
       setIsRealtimeReady(false);
-      return () => {};
+      
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = undefined;
+      }
+      return;
     }
     
     console.log("Setting up real-time order listener for user:", currentUser.uid);
@@ -145,6 +145,11 @@ export const useUserOrders = () => {
       where("userId", "==", currentUser.uid),
       orderBy("createdAt", "desc")
     );
+    
+    if (unsubscribeRef.current) {
+      console.log("Listener already exists, skipping setup");
+      return;
+    }
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const updatedOrders = snapshot.docs.map(doc => ({
@@ -160,14 +165,17 @@ export const useUserOrders = () => {
       setIsRealtimeReady(false);
     });
     
-    // Clean up listener on unmount
+    unsubscribeRef.current = unsubscribe;
+    
     return () => {
       console.log("Cleaning up real-time order listener");
-      unsubscribe();
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = undefined;
+      }
     };
   }, [currentUser]);
   
-  // Return real-time data if available, otherwise fall back to React Query data
   return {
     ...result,
     data: isRealtimeReady ? ordersRealtime : result.data,
@@ -182,10 +190,8 @@ export const useCreateOrder = () => {
     mutationFn: async (order: Omit<Order, "id">) => {
       console.log("Creating new order:", order);
       
-      // Clean order of undefined values before saving to Firestore
       const cleanedOrder = removeUndefinedValues(order);
       
-      // Validate required fields to prevent undefined values
       if (!cleanedOrder.userId) {
         throw new Error("Order must have a user ID");
       }
@@ -206,24 +212,20 @@ export const useCreateOrder = () => {
         throw new Error("Order must have a payment method");
       }
       
-      // Ensure all order items have required fields
       cleanedOrder.items.forEach((item, index) => {
         if (!item.id || !item.productId || !item.title || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
           throw new Error(`Invalid item at index ${index}`);
         }
       });
       
-      // Create the document with clean data
       const docRef = await addDoc(collection(db, "orders"), {
         ...cleanedOrder,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
       
-      // Track order completion for analytics
       await trackOrderCompletion();
       
-      // Return the created order with its ID
       const createdOrder = {
         id: docRef.id,
         ...cleanedOrder,
@@ -240,9 +242,15 @@ export const useCreateOrder = () => {
       queryClient.invalidateQueries({ queryKey: ["userOrders"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
       
-      // Force update user orders collection
       queryClient.setQueryData(["userOrders", data.userId], (oldData: Order[] | undefined) => {
         if (!oldData) return [data];
+        
+        const orderExists = oldData.some(order => order.id === data.id);
+        if (orderExists) {
+          console.log("Order already exists in cache, not adding duplicate");
+          return oldData;
+        }
+        
         return [data, ...oldData];
       });
     },
@@ -267,6 +275,16 @@ export const useUpdateOrderStatus = () => {
       queryClient.invalidateQueries({ queryKey: ["order", data.id] });
       queryClient.invalidateQueries({ queryKey: ["userOrders"] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      
+      queryClient.setQueriesData({ queryKey: ["userOrders"] }, (oldData: Order[] | undefined) => {
+        if (!oldData) return oldData;
+        
+        return oldData.map(order => 
+          order.id === data.id 
+            ? { ...order, status: data.status, updatedAt: Date.now() } 
+            : order
+        );
+      });
     },
   });
 };
