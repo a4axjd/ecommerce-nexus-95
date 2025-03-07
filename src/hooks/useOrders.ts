@@ -1,9 +1,10 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, addDoc, updateDoc, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 import { trackOrderCompletion } from "@/hooks/useAnalytics";
+import { useState, useEffect } from "react";
 
 export interface OrderItem {
   id: string;
@@ -102,8 +103,10 @@ export const useOrder = (id: string) => {
 
 export const useUserOrders = () => {
   const { currentUser } = useAuth();
+  const [ordersRealtime, setOrdersRealtime] = useState<Order[]>([]);
   
-  return useQuery({
+  // This will fetch orders with regular React Query
+  const result = useQuery({
     queryKey: ["userOrders", currentUser?.uid],
     queryFn: async () => {
       if (!currentUser) return [];
@@ -125,6 +128,43 @@ export const useUserOrders = () => {
     },
     enabled: !!currentUser,
   });
+  
+  // Setup real-time listener for the user's orders
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    console.log("Setting up real-time order listener for user:", currentUser.uid);
+    
+    const q = query(
+      collection(db, "orders"),
+      where("userId", "==", currentUser.uid),
+      orderBy("createdAt", "desc")
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const updatedOrders = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      
+      console.log("Real-time order update:", updatedOrders);
+      setOrdersRealtime(updatedOrders);
+    }, (error) => {
+      console.error("Error in real-time order listener:", error);
+    });
+    
+    // Clean up listener on unmount
+    return () => {
+      console.log("Cleaning up real-time order listener");
+      unsubscribe();
+    };
+  }, [currentUser]);
+  
+  // Return real-time data if available, otherwise fall back to React Query data
+  return {
+    ...result,
+    data: ordersRealtime.length > 0 ? ordersRealtime : result.data,
+  };
 };
 
 export const useCreateOrder = () => {

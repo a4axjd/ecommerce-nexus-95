@@ -9,7 +9,7 @@ import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { ProductCard } from "@/components/ProductCard";
 import { toast } from "sonner";
-import { User, Package, Heart, CreditCard, LogOut } from "lucide-react";
+import { User, Package, Heart, CreditCard, LogOut, Clock } from "lucide-react";
 import { useUserOrders } from "@/hooks/useOrders";
 
 interface WishlistProduct {
@@ -27,7 +27,7 @@ const UserAccount = () => {
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   
-  // Fetch user's orders
+  // Fetch user's orders with real-time updates
   const { data: orders = [], isLoading: isOrdersLoading } = useUserOrders();
 
   useEffect(() => {
@@ -141,6 +141,24 @@ const UserAccount = () => {
     }
   };
 
+  // Helper function to get status icon
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'processing':
+        return <Clock className="h-4 w-4 text-blue-600 animate-pulse" />;
+      case 'shipped':
+        return <Package className="h-4 w-4 text-indigo-600" />;
+      case 'delivered':
+        return <Package className="h-4 w-4 text-green-600" />;
+      case 'cancelled':
+        return <Clock className="h-4 w-4 text-red-600" />;
+      default:
+        return <Clock className="h-4 w-4" />;
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -165,6 +183,11 @@ const UserAccount = () => {
               >
                 <Package className="mr-2 h-4 w-4" />
                 Orders
+                {orders.length > 0 && (
+                  <span className="ml-auto bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                    {orders.length}
+                  </span>
+                )}
               </Button>
               <Button
                 variant={activeTab === "wishlist" ? "default" : "outline"}
@@ -277,7 +300,8 @@ const UserAccount = () => {
                                 <p className="text-sm text-muted-foreground">Placed on: {formatDate(order.createdAt)}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)} flex items-center gap-1.5`}>
+                                  {getStatusIcon(order.status)}
                                   {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                                 </span>
                                 <p className="font-semibold">${order.totalAmount.toFixed(2)}</p>
@@ -310,19 +334,66 @@ const UserAccount = () => {
                             </div>
                           </div>
                           
-                          {/* Order footer */}
-                          <div className="bg-gray-50 p-4 border-t flex flex-wrap justify-between items-center gap-4">
-                            <div>
-                              <p className="text-sm font-medium">
-                                Shipping to: {order.shippingAddress.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                Payment Method: {order.paymentMethod}
-                              </p>
+                          {/* Order footer with status tracking */}
+                          <div className="bg-gray-50 p-4 border-t">
+                            <div className="flex flex-col space-y-4">
+                              {/* Status tracking */}
+                              <div className="w-full">
+                                <div className="relative">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs text-gray-500">Order placed</span>
+                                    <span className="text-xs text-gray-500">Processing</span>
+                                    <span className="text-xs text-gray-500">Shipped</span>
+                                    <span className="text-xs text-gray-500">Delivered</span>
+                                  </div>
+                                  <div className="h-2 bg-gray-200 rounded-full">
+                                    <div className={`h-full rounded-full transition-all duration-500 ${
+                                      order.status === 'cancelled' ? 'bg-red-500 w-0' :
+                                      order.status === 'pending' ? 'bg-primary w-1/4' :
+                                      order.status === 'processing' ? 'bg-primary w-2/4' :
+                                      order.status === 'shipped' ? 'bg-primary w-3/4' :
+                                      'bg-primary w-full'
+                                    }`}></div>
+                                  </div>
+                                  <div className="flex items-center justify-between mt-2">
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                      order.status === 'cancelled' ? 'bg-gray-200' : 'bg-primary'
+                                    }`}>
+                                      <span className="text-white text-xs">✓</span>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                      ['processing', 'shipped', 'delivered'].includes(order.status) ? 'bg-primary' : 'bg-gray-200'
+                                    }`}>
+                                      <span className="text-white text-xs">✓</span>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                      ['shipped', 'delivered'].includes(order.status) ? 'bg-primary' : 'bg-gray-200'
+                                    }`}>
+                                      <span className="text-white text-xs">✓</span>
+                                    </div>
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                                      order.status === 'delivered' ? 'bg-primary' : 'bg-gray-200'
+                                    }`}>
+                                      <span className="text-white text-xs">✓</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex flex-wrap justify-between items-center gap-4">
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    Shipping to: {order.shippingAddress.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Payment Method: {order.paymentMethod}
+                                  </p>
+                                </div>
+                                <Button variant="outline" size="sm" asChild>
+                                  <Link to={`/products`}>Buy Again</Link>
+                                </Button>
+                              </div>
                             </div>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link to={`/products`}>Buy Again</Link>
-                            </Button>
                           </div>
                         </div>
                       ))}
