@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -12,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Check, 
   ChevronRight, 
+  CreditCard, 
   Home, 
   Mail,
   MapPin, 
@@ -21,22 +21,19 @@ import {
   ShieldCheck, 
   ShoppingBag, 
   Trash,
-  Banknote,
-  Building
+  Banknote
 } from "lucide-react";
+import { ProductCard } from "@/components/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { formatPrice } from "@/lib/storeSettings";
-import { useCreateOrder } from "@/hooks/useOrders";
 
 const steps = ["Cart", "Shipping", "Payment", "Confirmation"];
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const [activeStep, setActiveStep] = useState(0); // Start at cart step
+  const [currentStep, setCurrentStep] = useState(0); // Start at cart step
   const { settings } = useStoreSettings(); // Get store settings
-  const { currentUser } = useAuth();
-  const createOrder = useCreateOrder();
 
   const [shippingInfo, setShippingInfo] = useState({
     name: "",
@@ -55,6 +52,7 @@ const Checkout = () => {
   
   const { state: cartState, updateQuantity, removeFromCart, clearCart } = useCart();
   const { data: allProducts = [] } = useProducts();
+  const { currentUser } = useAuth(); // Get the current user
   
   // Update shipping country when store settings change
   useEffect(() => {
@@ -101,8 +99,7 @@ const Checkout = () => {
 
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Shipping form submitted, moving to payment step");
-    setActiveStep(2);
+    setCurrentStep(2);
   };
 
   const handlePaymentSuccess = () => {
@@ -110,48 +107,12 @@ const Checkout = () => {
     
     // Get the selected payment method based on the active tab
     const paymentMethodElement = document.querySelector('[role="tabpanel"][data-state="active"]');
-    let paymentMethod = "Bank Transfer"; // Default
+    let paymentMethod = "Credit Card"; // Default
     
-    if (paymentMethodElement?.id === "cod") {
+    if (paymentMethodElement?.id === "paypal") {
+      paymentMethod = "PayPal";
+    } else if (paymentMethodElement?.id === "cod") {
       paymentMethod = "Cash on Delivery";
-    }
-    
-    // Create order in the database
-    if (currentUser) {
-      try {
-        createOrder.mutate({
-          userId: currentUser.uid,
-          items: cartState.items.map(item => ({
-            id: item.id,
-            productId: item.id,
-            title: item.title,
-            price: item.price,
-            quantity: item.quantity,
-            image: item.image,
-            color: item.color,
-            size: item.size
-          })),
-          totalAmount: total,
-          status: 'pending',
-          shippingAddress: {
-            name: shippingInfo.name,
-            address: shippingInfo.address,
-            city: shippingInfo.city,
-            state: shippingInfo.state,
-            postalCode: shippingInfo.zipCode,
-            country: shippingInfo.country,
-            email: shippingInfo.email,
-            phone: shippingInfo.phone
-          },
-          paymentMethod: paymentMethod,
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          couponCode: discount > 0 ? couponCode : undefined,
-          discountAmount: discount > 0 ? discount : undefined
-        });
-      } catch (error) {
-        console.error("Failed to create order:", error);
-      }
     }
     
     // Navigate to confirmation with order details
@@ -166,9 +127,6 @@ const Checkout = () => {
     
     console.log("Navigating to order confirmation with details:", orderDetails);
     
-    // Clear the cart after successful order
-    clearCart();
-    
     navigate("/order-confirmation", {
       state: {
         orderDetails
@@ -176,7 +134,7 @@ const Checkout = () => {
     });
   };
 
-  if (cartState.items.length === 0 && activeStep === 0) {
+  if (cartState.items.length === 0 && currentStep === 0) {
     return (
       <div className="min-h-screen flex flex-col">
         <Navbar />
@@ -210,11 +168,9 @@ const Checkout = () => {
             {steps.map((step, index) => (
               <div key={index} className="flex flex-col items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                  index < activeStep ? "bg-primary text-primary-foreground" : 
-                  index === activeStep ? "bg-primary text-primary-foreground" : 
-                  "bg-muted text-muted-foreground"
+                  index < currentStep ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
                 }`}>
-                  {index < activeStep ? <Check className="w-4 h-4" /> : index + 1}
+                  {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
                 </div>
                 <div className="text-xs mt-2">{step}</div>
               </div>
@@ -224,7 +180,7 @@ const Checkout = () => {
             {[...Array(3)].map((_, i) => (
               <div
                 key={i}
-                className={`h-1 ${i < activeStep ? "bg-primary" : "bg-muted"}`}
+                className={`h-1 ${i < currentStep - 1 ? "bg-primary" : "bg-muted"}`}
               />
             ))}
           </div>
@@ -233,7 +189,7 @@ const Checkout = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 max-w-6xl mx-auto">
           {/* Main checkout form */}
           <div className="lg:col-span-7 space-y-8">
-            {activeStep === 0 && (
+            {currentStep === 0 && (
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <h2 className="text-xl font-semibold mb-4">Shopping Cart</h2>
                 <div className="space-y-4">
@@ -298,7 +254,7 @@ const Checkout = () => {
                       Continue Shopping
                     </Link>
                   </Button>
-                  <Button onClick={() => setActiveStep(1)}>
+                  <Button onClick={() => setCurrentStep(1)}>
                     Proceed to Shipping
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -306,7 +262,7 @@ const Checkout = () => {
               </div>
             )}
 
-            {activeStep === 1 && (
+            {currentStep === 1 && (
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <h2 className="text-xl font-semibold mb-4">Shipping Information</h2>
                 <form onSubmit={handleShippingSubmit} className="space-y-4">
@@ -424,7 +380,7 @@ const Checkout = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setActiveStep(0)}
+                      onClick={() => setCurrentStep(0)}
                     >
                       Back to Cart
                     </Button>
@@ -437,7 +393,7 @@ const Checkout = () => {
               </div>
             )}
 
-            {activeStep === 2 && (
+            {currentStep === 2 && (
               <div className="bg-white p-6 rounded-lg shadow-sm border">
                 <h2 className="text-xl font-semibold mb-6">Payment</h2>
                 <div className="mb-6 p-4 bg-secondary/50 rounded-lg flex items-start gap-3">
@@ -460,7 +416,7 @@ const Checkout = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => setActiveStep(1)}
+                    onClick={() => setCurrentStep(1)}
                   >
                     Back to Shipping
                   </Button>
@@ -544,11 +500,17 @@ const Checkout = () => {
                     <strong>Shipping method:</strong> Standard (3-5 business days)
                   </div>
                 </div>
-                {activeStep >= 2 && (
+                {currentStep >= 2 && (
                   <div className="flex items-center gap-3 text-sm">
-                    <div className="flex gap-1">
-                      <Building className="h-5 w-5 text-primary" />
-                      <strong>Payment:</strong> Bank Transfer / Cash on Delivery
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-1">
+                        <CreditCard className="h-5 w-5 text-primary" />
+                        <strong>Payment:</strong> Credit Card
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Banknote className="h-5 w-5 text-primary" />
+                        <span>Cash on Delivery</span>
+                      </div>
                     </div>
                   </div>
                 )}
