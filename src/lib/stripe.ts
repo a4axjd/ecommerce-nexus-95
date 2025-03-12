@@ -1,4 +1,3 @@
-
 import { loadStripe } from '@stripe/stripe-js';
 
 // Empty implementation since we're not using Stripe payments directly anymore

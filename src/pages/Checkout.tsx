@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Check, 
   ChevronRight, 
-  CreditCard, 
   Home, 
   Mail,
   MapPin, 
@@ -21,7 +20,8 @@ import {
   ShieldCheck, 
   ShoppingBag, 
   Trash,
-  Banknote
+  Banknote,
+  Building
 } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
@@ -107,11 +107,9 @@ const Checkout = () => {
     
     // Get the selected payment method based on the active tab
     const paymentMethodElement = document.querySelector('[role="tabpanel"][data-state="active"]');
-    let paymentMethod = "Credit Card"; // Default
+    let paymentMethod = "Bank Transfer"; // Default
     
-    if (paymentMethodElement?.id === "paypal") {
-      paymentMethod = "PayPal";
-    } else if (paymentMethodElement?.id === "cod") {
+    if (paymentMethodElement?.id === "cod") {
       paymentMethod = "Cash on Delivery";
     }
     
