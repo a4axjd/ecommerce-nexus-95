@@ -13,6 +13,12 @@ export interface StoreSettings {
     countryCode: string;
     timezone: string;
   };
+  bankTransfer: {
+    accountName: string;
+    accountNumber: string;
+    bankName: string;
+    instructions: string;
+  };
 }
 
 export const defaultStoreSettings: StoreSettings = {
@@ -25,6 +31,12 @@ export const defaultStoreSettings: StoreSettings = {
     country: "United States",
     countryCode: "US",
     timezone: "America/New_York"
+  },
+  bankTransfer: {
+    accountName: "Your Company Name",
+    accountNumber: "123456789",
+    bankName: "Example Bank",
+    instructions: "Please transfer the total amount to the bank account details provided. Your order will be processed once payment is confirmed. Include your order number as reference."
   }
 };
 

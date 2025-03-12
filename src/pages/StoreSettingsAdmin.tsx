@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { formatPrice } from "@/lib/storeSettings";
-import { DollarSign, Globe } from "lucide-react";
+import { DollarSign, Globe, CreditCard } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -27,7 +28,7 @@ const StoreSettingsAdmin = () => {
     setNewSettings(settings);
   }, [settings]);
   
-  const handleSettingsChange = (section: "currency" | "region", key: string, value: string) => {
+  const handleSettingsChange = (section: "currency" | "region" | "bankTransfer", key: string, value: string) => {
     setNewSettings(prev => ({
       ...prev,
       [section]: {
@@ -192,6 +193,68 @@ const StoreSettingsAdmin = () => {
                     />
                     <p className="text-xs text-muted-foreground mt-1">
                       This is set automatically based on the selected country/region
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <CardTitle>Bank Transfer Settings</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Configure bank transfer payment details
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Bank Name
+                    </label>
+                    <Input
+                      value={newSettings.bankTransfer.bankName}
+                      onChange={(e) => handleSettingsChange("bankTransfer", "bankName", e.target.value)}
+                      placeholder="Example Bank"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Account Name
+                    </label>
+                    <Input
+                      value={newSettings.bankTransfer.accountName}
+                      onChange={(e) => handleSettingsChange("bankTransfer", "accountName", e.target.value)}
+                      placeholder="Your Company Name"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Account Number
+                    </label>
+                    <Input
+                      value={newSettings.bankTransfer.accountNumber}
+                      onChange={(e) => handleSettingsChange("bankTransfer", "accountNumber", e.target.value)}
+                      placeholder="123456789"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Instructions for Customers
+                    </label>
+                    <Textarea
+                      value={newSettings.bankTransfer.instructions}
+                      onChange={(e) => handleSettingsChange("bankTransfer", "instructions", e.target.value)}
+                      placeholder="Please provide instructions for customers on how to complete their bank transfer payment."
+                      rows={4}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      These instructions will be shown to customers who select bank transfer as their payment method.
                     </p>
                   </div>
                 </CardContent>
