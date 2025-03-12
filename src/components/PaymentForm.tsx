@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Banknote, HomeIcon, Bank } from "lucide-react";
+import { Banknote, HomeIcon, Building } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
@@ -119,7 +119,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     <Tabs defaultValue="bank" onValueChange={(value) => setPaymentMethod(value as "bank" | "cod")}>
       <TabsList className="grid w-full grid-cols-2 mb-6">
         <TabsTrigger value="bank" className="flex items-center gap-2" disabled={orderComplete}>
-          <Bank className="h-4 w-4" />
+          <Building className="h-4 w-4" />
           Bank Transfer
         </TabsTrigger>
         <TabsTrigger value="cod" className="flex items-center gap-2" disabled={orderComplete}>
@@ -135,7 +135,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
           <div className="p-4 bg-secondary/50 rounded-lg">
             <div className="flex items-start gap-3 mb-4">
               <div className="mt-1">
-                <Bank className="h-5 w-5 text-primary" />
+                <Building className="h-5 w-5 text-primary" />
               </div>
               <div>
                 <p className="text-sm font-medium">Bank Transfer</p>
@@ -166,7 +166,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
             disabled={isLoading || formSubmitted || orderComplete}
             variant="default"
           >
-            <Bank className="w-4 h-4 mr-2" />
+            <Building className="w-4 h-4 mr-2" />
             {isLoading ? "Processing..." : `Place Order - Pay ${settings.currency.symbol}${amount.toFixed(2)} via Bank Transfer`}
           </Button>
         </form>
