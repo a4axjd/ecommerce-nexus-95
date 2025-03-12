@@ -125,6 +125,9 @@ const Checkout = () => {
     
     console.log("Navigating to order confirmation with details:", orderDetails);
     
+    // Clear the cart after successful order
+    clearCart();
+    
     navigate("/order-confirmation", {
       state: {
         orderDetails
@@ -500,11 +503,9 @@ const Checkout = () => {
                 </div>
                 {currentStep >= 2 && (
                   <div className="flex items-center gap-3 text-sm">
-                    <div className="flex flex-wrap gap-2">
-                      <div className="flex items-center gap-1">
-                        <Building className="h-5 w-5 text-primary" />
-                        <strong>Payment:</strong> Bank Transfer / Cash on Delivery
-                      </div>
+                    <div className="flex items-center gap-1">
+                      <Building className="h-5 w-5 text-primary" />
+                      <strong>Payment:</strong> Bank Transfer / Cash on Delivery
                     </div>
                   </div>
                 )}

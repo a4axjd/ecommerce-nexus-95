@@ -24,75 +24,33 @@ interface PaymentFormProps {
 export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"bank" | "cod">("bank");
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  const [orderComplete, setOrderComplete] = useState(false);
   const { settings } = useStoreSettings();
-
-  const handlePaymentSuccess = () => {
-    console.log("Payment method selected, completing order");
-    setOrderComplete(true);
-    // Call onSuccess to navigate to order confirmation page
-    onSuccess();
-  };
 
   const handleBankTransferSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    
-    // Prevent duplicate submissions
-    if (formSubmitted || isLoading || orderComplete) {
-      console.log("Preventing duplicate submission - form already submitted or order completed");
-      return;
-    }
-    
     setIsLoading(true);
-    setFormSubmitted(true);
     toast.info("Processing Bank Transfer request...");
     
-    try {
-      // Simulate processing
-      console.log("Bank Transfer processed successfully");
+    // Simulate processing
+    setTimeout(() => {
       toast.success("Bank Transfer order confirmed");
       setIsLoading(false);
-      handlePaymentSuccess();
-    } catch (error) {
-      console.error("Bank Transfer error:", error);
-      toast.error("Order failed. Please try again.");
-      setIsLoading(false);
-      setFormSubmitted(false); // Reset to allow retry
-    }
+      onSuccess();
+    }, 1000);
   };
 
   const handleCodSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    
-    // Prevent duplicate submissions
-    if (formSubmitted || isLoading || orderComplete) {
-      console.log("Preventing duplicate submission - form already submitted or order completed");
-      return;
-    }
-    
     setIsLoading(true);
-    setFormSubmitted(true);
     toast.info("Processing Cash on Delivery request...");
     
-    try {
-      // Simulate processing
-      console.log("Cash on Delivery processed successfully");
+    // Simulate processing
+    setTimeout(() => {
       toast.success("Cash on Delivery order confirmed");
       setIsLoading(false);
-      handlePaymentSuccess();
-    } catch (error) {
-      console.error("COD error:", error);
-      toast.error("Order failed. Please try again.");
-      setIsLoading(false);
-      setFormSubmitted(false); // Reset to allow retry
-    }
+      onSuccess();
+    }, 1000);
   };
-
-  // Reset form submitted state when payment method changes
-  useEffect(() => {
-    setFormSubmitted(false);
-  }, [paymentMethod]);
 
   // Display information about shipped to address
   const renderShippingInfo = () => {
@@ -116,18 +74,18 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
   return (
     <Tabs defaultValue="bank" onValueChange={(value) => setPaymentMethod(value as "bank" | "cod")}>
       <TabsList className="grid w-full grid-cols-2 mb-6">
-        <TabsTrigger value="bank" className="flex items-center gap-2" disabled={orderComplete}>
+        <TabsTrigger value="bank" className="flex items-center gap-2">
           <Building className="h-4 w-4" />
           Bank Transfer
         </TabsTrigger>
-        <TabsTrigger value="cod" className="flex items-center gap-2" disabled={orderComplete}>
+        <TabsTrigger value="cod" className="flex items-center gap-2">
           <Banknote className="h-4 w-4" />
           Cash on Delivery
         </TabsTrigger>
       </TabsList>
 
       {/* Bank Transfer Tab */}
-      <TabsContent value="bank" className="space-y-6">
+      <TabsContent value="bank" className="space-y-6" id="bank">
         {shippingInfo && renderShippingInfo()}
         
         <form onSubmit={handleBankTransferSubmit} className="space-y-6">
@@ -162,7 +120,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isLoading || formSubmitted || orderComplete}
+            disabled={isLoading}
             variant="default"
           >
             <Building className="w-4 h-4 mr-2" />
@@ -172,7 +130,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
       </TabsContent>
 
       {/* Cash on Delivery Tab */}
-      <TabsContent value="cod" className="space-y-6">
+      <TabsContent value="cod" className="space-y-6" id="cod">
         {shippingInfo && renderShippingInfo()}
         
         <form onSubmit={handleCodSubmit} className="space-y-6">
@@ -208,7 +166,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isLoading || formSubmitted || orderComplete}
+            disabled={isLoading}
             variant="outline"
           >
             <Banknote className="w-4 h-4 mr-2" />
