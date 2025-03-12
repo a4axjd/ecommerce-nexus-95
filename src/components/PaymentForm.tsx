@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Banknote, HomeIcon, Building } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useNavigate } from "react-router-dom";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 
 interface PaymentFormProps {
@@ -23,7 +22,6 @@ interface PaymentFormProps {
 }
 
 export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProps) => {
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"bank" | "cod">("bank");
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -128,6 +126,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
         </TabsTrigger>
       </TabsList>
 
+      {/* Bank Transfer Tab */}
       <TabsContent value="bank" className="space-y-6">
         {shippingInfo && renderShippingInfo()}
         
@@ -172,6 +171,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
         </form>
       </TabsContent>
 
+      {/* Cash on Delivery Tab */}
       <TabsContent value="cod" className="space-y-6">
         {shippingInfo && renderShippingInfo()}
         

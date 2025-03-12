@@ -75,12 +75,17 @@ function App() {
     applyNytherisTheme();
   }, []);
 
+  // Configure the Elements provider with empty options to prevent any issues
+  const stripeOptions = {
+    loader: 'never' as 'never' // This prevents auto-loading of Stripe
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TooltipProvider>
           <CartProvider>
-            <Elements stripe={stripePromise}>
+            <Elements stripe={stripePromise} options={stripeOptions}>
               <Sonner position="top-right" />
               <BrowserRouter>
                 <AnalyticsTracker />
