@@ -85,7 +85,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
       </TabsList>
 
       {/* Bank Transfer Tab */}
-      <TabsContent value="bank" className="space-y-6" id="bank">
+      <TabsContent value="bank" className="space-y-6">
         {shippingInfo && renderShippingInfo()}
         
         <form onSubmit={handleBankTransferSubmit} className="space-y-6">
@@ -130,7 +130,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
       </TabsContent>
 
       {/* Cash on Delivery Tab */}
-      <TabsContent value="cod" className="space-y-6" id="cod">
+      <TabsContent value="cod" className="space-y-6">
         {shippingInfo && renderShippingInfo()}
         
         <form onSubmit={handleCodSubmit} className="space-y-6">
