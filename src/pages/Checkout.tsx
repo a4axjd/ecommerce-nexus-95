@@ -502,12 +502,8 @@ const Checkout = () => {
                   <div className="flex items-center gap-3 text-sm">
                     <div className="flex flex-wrap gap-2">
                       <div className="flex items-center gap-1">
-                        <CreditCard className="h-5 w-5 text-primary" />
-                        <strong>Payment:</strong> Credit Card
-                      </div>
-                      <div className="flex items-center gap-1 ml-2">
-                        <Banknote className="h-5 w-5 text-primary" />
-                        <span>Cash on Delivery</span>
+                        <Building className="h-5 w-5 text-primary" />
+                        <strong>Payment:</strong> Bank Transfer / Cash on Delivery
                       </div>
                     </div>
                   </div>
