@@ -101,13 +101,15 @@ export const useUserOrders = () => {
   const { currentUser } = useAuth();
   const [ordersRealtime, setOrdersRealtime] = useState<Order[]>([]);
   const [isRealtimeReady, setIsRealtimeReady] = useState(false);
-  const unsubscribeRef = useRef<() => void | null>();
+  const unsubscribeRef = useRef<(() => void) | null>(null);
+  const queryClient = useQueryClient();
   
   const result = useQuery({
     queryKey: ["userOrders", currentUser?.uid],
     queryFn: async () => {
       if (!currentUser) return [];
-      console.log("Fetching orders for user:", currentUser.uid);
+      
+      console.log("Initial fetch of orders for user:", currentUser.uid);
       const querySnapshot = await getDocs(
         query(
           collection(db, "orders"), 
@@ -115,25 +117,34 @@ export const useUserOrders = () => {
           orderBy("createdAt", "desc")
         )
       );
+      
       const orders = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Order[];
       
-      console.log("Fetched user orders:", orders);
+      if (orders.length > 0) {
+        orders.forEach(order => {
+          queryClient.setQueryData(["order", order.id], order);
+        });
+      }
+      
+      console.log("Initial fetch returned user orders:", orders.length);
       return orders;
     },
     enabled: !!currentUser,
+    staleTime: 60000,
   });
   
   useEffect(() => {
     if (!currentUser) {
+      console.log("No user, clearing realtime orders");
       setOrdersRealtime([]);
       setIsRealtimeReady(false);
       
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
-        unsubscribeRef.current = undefined;
+        unsubscribeRef.current = null;
       }
       return;
     }
@@ -147,8 +158,8 @@ export const useUserOrders = () => {
     );
     
     if (unsubscribeRef.current) {
-      console.log("Listener already exists, skipping setup");
-      return;
+      unsubscribeRef.current();
+      unsubscribeRef.current = null;
     }
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -158,6 +169,11 @@ export const useUserOrders = () => {
       })) as Order[];
       
       console.log("Real-time order update received, orders count:", updatedOrders.length);
+      
+      updatedOrders.forEach(order => {
+        queryClient.setQueryData(["order", order.id], order);
+      });
+      
       setOrdersRealtime(updatedOrders);
       setIsRealtimeReady(true);
     }, (error) => {
@@ -171,14 +187,16 @@ export const useUserOrders = () => {
       console.log("Cleaning up real-time order listener");
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
-        unsubscribeRef.current = undefined;
+        unsubscribeRef.current = null;
       }
     };
-  }, [currentUser]);
+  }, [currentUser, queryClient]);
+  
+  const mergedOrders = isRealtimeReady ? ordersRealtime : (result.data || []);
   
   return {
     ...result,
-    data: isRealtimeReady ? ordersRealtime : result.data,
+    data: mergedOrders,
     isLoading: result.isLoading && !isRealtimeReady,
   };
 };
@@ -237,10 +255,9 @@ export const useCreateOrder = () => {
       return createdOrder;
     },
     onSuccess: (data) => {
-      console.log("Invalidating orders queries after successful order creation");
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["userOrders"] });
-      queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      console.log("Order creation successful, updating cache");
+      
+      queryClient.setQueryData(["order", data.id], data);
       
       queryClient.setQueryData(["userOrders", data.userId], (oldData: Order[] | undefined) => {
         if (!oldData) return [data];
@@ -253,6 +270,10 @@ export const useCreateOrder = () => {
         
         return [data, ...oldData];
       });
+      
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["userOrders", data.userId] });
+      queryClient.invalidateQueries({ queryKey: ["analytics"] });
     },
   });
 };
@@ -263,28 +284,54 @@ export const useUpdateOrderStatus = () => {
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Order["status"] }) => {
       console.log(`Updating order ${id} status to ${status}`);
-      await updateDoc(doc(db, "orders", id), { 
+      
+      const docRef = doc(db, "orders", id);
+      const docSnap = await getDoc(docRef);
+      
+      if (!docSnap.exists()) {
+        throw new Error(`Order with ID ${id} not found`);
+      }
+      
+      const currentOrder = { id: docSnap.id, ...docSnap.data() } as Order;
+      
+      await updateDoc(docRef, { 
         status,
         updatedAt: Date.now()
       });
-      return { id, status };
-    },
-    onSuccess: (data) => {
-      console.log("Order status updated successfully");
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-      queryClient.invalidateQueries({ queryKey: ["order", data.id] });
-      queryClient.invalidateQueries({ queryKey: ["userOrders"] });
-      queryClient.invalidateQueries({ queryKey: ["analytics"] });
       
-      queryClient.setQueriesData({ queryKey: ["userOrders"] }, (oldData: Order[] | undefined) => {
-        if (!oldData) return oldData;
+      return { 
+        ...currentOrder, 
+        status, 
+        updatedAt: Date.now() 
+      };
+    },
+    onSuccess: (updatedOrder) => {
+      console.log("Order status updated successfully:", updatedOrder);
+      
+      queryClient.setQueryData(["order", updatedOrder.id], updatedOrder);
+      
+      queryClient.setQueryData(["userOrders", updatedOrder.userId], (oldData: Order[] | undefined) => {
+        if (!oldData) return [updatedOrder];
         
         return oldData.map(order => 
-          order.id === data.id 
-            ? { ...order, status: data.status, updatedAt: Date.now() } 
-            : order
+          order.id === updatedOrder.id ? updatedOrder : order
         );
       });
+      
+      queryClient.setQueryData(["orders"], (oldData: Order[] | undefined) => {
+        if (!oldData) return [updatedOrder];
+        
+        return oldData.map(order => 
+          order.id === updatedOrder.id ? updatedOrder : order
+        );
+      });
+      
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["orders"] });
+        queryClient.invalidateQueries({ queryKey: ["order", updatedOrder.id] });
+        queryClient.invalidateQueries({ queryKey: ["userOrders", updatedOrder.userId] });
+        queryClient.invalidateQueries({ queryKey: ["analytics"] });
+      }, 500);
     },
   });
 };

@@ -27,6 +27,9 @@ const UserAccount = () => {
   const navigate = useNavigate();
   
   const { data: orders = [], isLoading: isOrdersLoading } = useUserOrders();
+  
+  console.log("Current user in UserAccount:", currentUser?.uid);
+  console.log("Current orders in UserAccount:", orders?.length || 0);
 
   useEffect(() => {
     if (!currentUser) {
@@ -86,6 +89,7 @@ const UserAccount = () => {
 
   const handleLogout = async () => {
     try {
+      console.log("Logging out, clearing local data");
       await signOut();
       navigate("/");
       toast.success("Logged out successfully");
@@ -150,8 +154,6 @@ const UserAccount = () => {
         return <Clock className="h-4 w-4" />;
     }
   };
-
-  console.log("Current orders in UserAccount:", orders);
 
   return (
     <div className="min-h-screen flex flex-col">
