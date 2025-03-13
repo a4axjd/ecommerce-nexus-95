@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CreditCard, Banknote, HomeIcon } from "lucide-react";
@@ -31,6 +32,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const { settings } = useStoreSettings();
+  const paymentProcessedRef = useRef(false);
   
   // For manual card input form
   const [cardInfo, setCardInfo] = useState({
@@ -78,8 +80,16 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
   };
 
   const handlePaymentSuccess = () => {
+    // Prevent duplicate order submissions
+    if (paymentProcessedRef.current) {
+      console.log("Payment already processed, ignoring duplicate success call");
+      return;
+    }
+    
     console.log("Payment successful, completing order");
+    paymentProcessedRef.current = true;
     setOrderComplete(true);
+    
     // Ensure we call onSuccess to navigate to order confirmation page
     setTimeout(() => {
       onSuccess();
@@ -90,7 +100,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     event.preventDefault();
     
     // Prevent duplicate submissions
-    if (formSubmitted || isLoading || orderComplete) {
+    if (formSubmitted || isLoading || orderComplete || paymentProcessedRef.current) {
       console.log("Preventing duplicate submission - form already submitted or order completed");
       return;
     }
@@ -123,7 +133,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
 
   const handlePayPalApprove = (data: any, actions: any) => {
     // Prevent duplicate submissions
-    if (formSubmitted || orderComplete) {
+    if (formSubmitted || orderComplete || paymentProcessedRef.current) {
       console.log("Preventing duplicate PayPal submission - already processed or order completed");
       return Promise.resolve();
     }
@@ -153,7 +163,7 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     event.preventDefault();
     
     // Prevent duplicate submissions
-    if (formSubmitted || isLoading || orderComplete) {
+    if (formSubmitted || isLoading || orderComplete || paymentProcessedRef.current) {
       console.log("Preventing duplicate submission - form already submitted or order completed");
       return;
     }
@@ -433,3 +443,4 @@ export const PaymentForm = ({ onSuccess, amount, shippingInfo }: PaymentFormProp
     </Tabs>
   );
 };
+

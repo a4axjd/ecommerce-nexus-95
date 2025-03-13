@@ -77,3 +77,8 @@ export const formatPrice = (price: number, settings?: StoreSettings): string => 
     return `${formattedPrice} ${currency.symbol}`;
   }
 };
+
+// Generate a unique order ID to prevent duplicates
+export const generateOrderId = (): string => {
+  return `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+};

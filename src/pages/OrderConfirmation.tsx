@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -18,6 +19,7 @@ const OrderConfirmation = () => {
   const [orderProcessed, setOrderProcessed] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const orderProcessedRef = useRef(false);
   
   // Get order details from location state
   const orderDetails = location.state?.orderDetails;
@@ -30,17 +32,26 @@ const OrderConfirmation = () => {
       return;
     }
     
-    // Prevent duplicate order creation
-    if (orderProcessed) {
-      console.log("Order already processed, skipping creation");
+    // Use ref to prevent duplicate order creation
+    if (orderProcessedRef.current) {
+      console.log("Order already processed (ref), skipping creation");
       return;
     }
     
     const createNewOrder = async () => {
+      // Exit early if order was already processed
+      if (orderProcessed) {
+        console.log("Order already processed (state), skipping creation");
+        return;
+      }
+      
       try {
-        // Set loading and processed state immediately to prevent duplicate submissions
+        // Set loading state
         setIsLoading(true);
+        // Set processed state immediately to prevent duplicate submissions (both ref and state)
+        orderProcessedRef.current = true;
         setOrderProcessed(true);
+        
         console.log("Starting order creation process");
         
         // Create order items from cart items
@@ -98,6 +109,8 @@ const OrderConfirmation = () => {
       } catch (error) {
         console.error("Error creating order:", error);
         toast.error("Failed to create order: " + (error instanceof Error ? error.message : String(error)));
+        // Reset state on error to allow retry
+        orderProcessedRef.current = false;
         setOrderProcessed(false);
       } finally {
         setIsLoading(false);
