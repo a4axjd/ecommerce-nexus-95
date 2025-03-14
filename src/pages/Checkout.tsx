@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -139,7 +138,9 @@ const Checkout = () => {
       }
     }
     
-    setCurrentStep(2);
+    // Don't automatically go to payment step anymore
+    // Instead, show the order summary card first
+    // setCurrentStep(2);
   };
 
   const handlePaymentSuccess = () => {
@@ -199,7 +200,7 @@ const Checkout = () => {
 
   // Render Order Summary Card after shipping information is submitted
   const renderOrderSummaryCard = () => {
-    if (currentStep === 1 && orderSummaryCreated) {
+    if (currentStep === 1 && shippingInfo.name) {
       return (
         <div className="mb-6">
           <Card>
