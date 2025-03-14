@@ -219,8 +219,7 @@ const OrderConfirmation = () => {
         console.log("User closed order summary dialog");
         setShowConfirmation(false);
         
-        // Now that the user has explicitly closed the dialog, redirect to home
-        navigate("/");
+        // Don't automatically navigate away - let the user decide by clicking buttons
       } else {
         console.log("Preventing dialog close - still loading");
         setShowConfirmation(true);
@@ -403,7 +402,7 @@ const OrderConfirmation = () => {
                   if (!isLoading && !dialogForcedOpenRef.current) {
                     userClosedDialogRef.current = true;
                     setShowConfirmation(false);
-                    navigate("/");
+                    // Don't automatically redirect - let user decide
                   }
                 }}
                 disabled={isLoading || dialogForcedOpenRef.current}
