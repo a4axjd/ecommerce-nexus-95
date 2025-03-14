@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -68,7 +67,6 @@ const Index = () => {
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
   const [showNewsletter, setShowNewsletter] = useState(false);
   
-  // Get recently viewed products from localStorage
   useEffect(() => {
     const storedRecent = localStorage.getItem('recentlyViewed');
     if (storedRecent) {
@@ -76,7 +74,6 @@ const Index = () => {
     }
   }, []);
   
-  // Show newsletter popup after 5 seconds
   useEffect(() => {
     const hasSeenPopup = localStorage.getItem('hasSeenNewsletterPopup');
     
@@ -90,7 +87,6 @@ const Index = () => {
     }
   }, []);
   
-  // Filter products to get recently viewed items
   const recentlyViewedProducts = allProducts.filter(
     product => recentlyViewed.includes(product.id)
   );
@@ -100,12 +96,10 @@ const Index = () => {
       <Navbar />
       
       <main className="flex-grow">
-        {/* Hero Carousel Section */}
         <section>
           <HeroCarousel />
         </section>
 
-        {/* Features Section */}
         <section className="py-20 bg-white">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -134,10 +128,8 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Trending Products Section */}
         <TrendingProducts />
 
-        {/* Recently Viewed */}
         {recentlyViewedProducts.length > 0 && (
           <section className="py-16 bg-secondary/30">
             <div className="container mx-auto px-4">
@@ -162,7 +154,6 @@ const Index = () => {
           </section>
         )}
 
-        {/* Featured Products */}
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-10">
@@ -197,7 +188,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Categories Section */}
         <section className="py-16 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="text-center mb-10">
@@ -232,20 +222,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Instagram Feed Section */}
-        <section className="py-16 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl font-bold mb-4">Style Inspiration</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Check out how our community styles Nytheris pieces
-              </p>
-            </div>
-            <InstagramFeed />
-          </div>
-        </section>
-
-        {/* Testimonials Section */}
         <section className="py-16 bg-secondary/20">
           <div className="container mx-auto px-4">
             <div className="text-center mb-10">
@@ -280,7 +256,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Newsletter Section */}
         <section className="py-20 bg-primary/5">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto text-center">
@@ -309,7 +284,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Featured Blogs */}
         <section className="py-16 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-10">
@@ -378,7 +352,6 @@ const Index = () => {
 
       <Footer />
       
-      {/* Newsletter Popup */}
       <NewsletterSignup 
         isOpen={showNewsletter} 
         onClose={() => setShowNewsletter(false)} 
