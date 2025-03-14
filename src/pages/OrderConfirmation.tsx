@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -37,10 +36,9 @@ const OrderConfirmation = () => {
   
   const orderDetails = location.state?.orderDetails;
   
-  // Use this ref to prevent the confirmation dialog from auto-closing
-  const preventAutoCloseRef = useRef(true);
-  
   useEffect(() => {
+    setShowConfirmation(true);
+    
     if (!orderDetails || cartState.items.length === 0) {
       console.log("No order details or empty cart, redirecting to home");
       navigate("/");
@@ -110,7 +108,6 @@ const OrderConfirmation = () => {
         console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
         
-        // Attempt to send confirmation email if customer email is available
         if (orderDetails.shippingAddress.email) {
           try {
             console.log("Sending order confirmation email");
@@ -125,20 +122,19 @@ const OrderConfirmation = () => {
             );
           } catch (emailError) {
             console.error("Failed to send confirmation email:", emailError);
-            // Don't throw here - we don't want to fail the order if email fails
           }
         }
         
         clearCart();
         
-        // Make sure the confirmation dialog stays open
-        setShowConfirmation(true);
+        setTimeout(() => {
+          setShowConfirmation(true);
+        }, 100);
         
-        // Use a custom toast that won't interfere with the dialog
         toast.success("Order placed successfully!", {
-          duration: 3000,
-          onAutoClose: () => {
-            // Ensure the confirmation dialog stays open after toast closes
+          id: "order-success",
+          onDismiss: () => {
+            console.log("Toast dismissed, ensuring dialog stays open");
             setShowConfirmation(true);
           }
         });
@@ -149,20 +145,29 @@ const OrderConfirmation = () => {
         setOrderProcessed(false);
       } finally {
         setIsLoading(false);
+        setTimeout(() => {
+          setShowConfirmation(true);
+        }, 200);
       }
     };
     
     createNewOrder();
   }, [orderDetails, cartState, navigate, clearCart, createOrder, currentUser?.uid, orderProcessed]);
   
-  // Explicitly handle dialog close to prevent accidental dismissal
   const handleDialogClose = (open: boolean) => {
-    // Only allow manual closing after loading is complete
-    if (!isLoading && !open) {
-      setShowConfirmation(open);
-    } else {
-      // Force dialog to stay open during loading
-      setShowConfirmation(true);
+    if (!open) {
+      if (!isLoading) {
+        if (orderId) {
+          console.log("Manual dialog close - allowing");
+          setShowConfirmation(false);
+        } else {
+          console.log("Preventing dialog close - no order ID yet");
+          setShowConfirmation(true);
+        }
+      } else {
+        console.log("Preventing dialog close - still loading");
+        setShowConfirmation(true);
+      }
     }
   };
   
@@ -177,6 +182,13 @@ const OrderConfirmation = () => {
       </div>
     );
   }
+  
+  useEffect(() => {
+    if (orderDetails && !orderId && !isLoading && !orderProcessed) {
+      console.log("On order confirmation page but no processing has started");
+      setShowConfirmation(true);
+    }
+  }, [orderDetails, orderId, isLoading, orderProcessed]);
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -314,7 +326,7 @@ const OrderConfirmation = () => {
         open={showConfirmation} 
         onOpenChange={handleDialogClose}
       >
-        <AlertDialogContent className="max-w-md">
+        <AlertDialogContent className="max-w-md z-[1000]">
           <AlertDialogHeader>
             <div className="flex justify-between items-center">
               <AlertDialogTitle className="text-lg font-bold">Order Placed Successfully!</AlertDialogTitle>
@@ -322,8 +334,12 @@ const OrderConfirmation = () => {
                 variant="ghost" 
                 size="icon" 
                 className="h-6 w-6" 
-                onClick={() => setShowConfirmation(false)}
-                disabled={isLoading}
+                onClick={() => {
+                  if (!isLoading && orderId) {
+                    setShowConfirmation(false);
+                  }
+                }}
+                disabled={isLoading || !orderId}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -367,10 +383,13 @@ const OrderConfirmation = () => {
           )}
           
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => {
-              setShowConfirmation(false);
-              navigate("/account");
-            }}>
+            <AlertDialogAction 
+              onClick={() => {
+                setShowConfirmation(false);
+                navigate("/account");
+              }}
+              disabled={isLoading || !orderId}
+            >
               View Order History
             </AlertDialogAction>
           </AlertDialogFooter>
