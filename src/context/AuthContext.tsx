@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log("Auth state changed:", user?.email);
       setCurrentUser(user);
       
       if (user) {
@@ -50,8 +51,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setUserRoles({ isAdmin: false });
             setIsAdmin(false);
           }
+          
+          // Also ensure the user document exists in users collection
+          const userProfileDoc = await getDoc(doc(db, "users", user.uid));
+          if (!userProfileDoc.exists()) {
+            await setDoc(doc(db, "users", user.uid), {
+              email: user.email,
+              displayName: user.displayName || '',
+              createdAt: Date.now(),
+              wishlist: []
+            });
+          }
         } catch (error) {
-          console.error("Error fetching user roles:", error);
+          console.error("Error fetching user data:", error);
           setUserRoles({ isAdmin: false });
           setIsAdmin(false);
         }
@@ -67,27 +79,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string) => {
+    setLoading(true);
     try {
+      console.log("Starting sign up process for:", email);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      console.log("User created:", userCredential.user.uid);
+      
       // Set default role for new users
       await setDoc(doc(db, "userRoles", userCredential.user.uid), {
         isAdmin: false,
       });
+      
+      // Create user profile document
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        email: userCredential.user.email,
+        displayName: userCredential.user.displayName || '',
+        createdAt: Date.now(),
+        wishlist: []
+      });
+      
       toast.success('Account created successfully');
+      return Promise.resolve();
     } catch (error) {
       console.error('Sign up error:', error);
       toast.error('Failed to create account. ' + (error instanceof Error ? error.message : 'Please try again.'));
+      setLoading(false);
       throw error;
     }
   };
 
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
     try {
+      console.log("Starting sign in process for:", email);
       await signInWithEmailAndPassword(auth, email, password);
       toast.success('Signed in successfully');
     } catch (error) {
       console.error('Sign in error:', error);
       toast.error('Failed to sign in. Please check your credentials.');
+      setLoading(false);
       throw error;
     }
   };
@@ -115,7 +145,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading ? children : (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };

@@ -97,7 +97,7 @@ function App() {
                   <Route 
                     path="/account" 
                     element={
-                      <ProtectedRoute>
+                      <ProtectedRoute requireAdmin={false}>
                         <UserAccount />
                       </ProtectedRoute>
                     } 
