@@ -231,28 +231,33 @@ export const useCreateOrder = () => {
       }
       
       cleanedOrder.items.forEach((item, index) => {
-        if (!item.id || !item.productId || !item.title || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
+        if (!item.productId || !item.title || typeof item.price !== 'number' || typeof item.quantity !== 'number') {
           throw new Error(`Invalid item at index ${index}`);
         }
       });
       
-      const docRef = await addDoc(collection(db, "orders"), {
-        ...cleanedOrder,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
-      
-      await trackOrderCompletion();
-      
-      const createdOrder = {
-        id: docRef.id,
-        ...cleanedOrder,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      } as Order;
-      
-      console.log("Order created with ID:", docRef.id);
-      return createdOrder;
+      try {
+        const docRef = await addDoc(collection(db, "orders"), {
+          ...cleanedOrder,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+        
+        await trackOrderCompletion();
+        
+        const createdOrder = {
+          id: docRef.id,
+          ...cleanedOrder,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        } as Order;
+        
+        console.log("Order created with ID:", docRef.id);
+        return createdOrder;
+      } catch (error) {
+        console.error("Error in addDoc operation:", error);
+        throw new Error(`Failed to create order: ${error instanceof Error ? error.message : String(error)}`);
+      }
     },
     onSuccess: (data) => {
       console.log("Order creation successful, updating cache");

@@ -18,7 +18,17 @@ export interface OrderSummary {
     quantity: number;
     image: string;
   }[];
-  shippingAddress: any;
+  shippingAddress: {
+    name: string;
+    address: string;
+    city: string;
+    state?: string;
+    zipCode?: string;
+    postalCode?: string;
+    country: string;
+    email?: string;
+    phone?: string;
+  };
   viewed: boolean;
   createdAt: number;
   discount?: number;
@@ -75,12 +85,19 @@ export const useCreateOrderSummary = () => {
   
   return useMutation({
     mutationFn: async (orderSummary: Omit<OrderSummary, "id">) => {
-      const docRef = await addDoc(collection(db, "orderSummaries"), orderSummary);
-      
-      return {
-        id: docRef.id,
-        ...orderSummary,
-      } as OrderSummary;
+      try {
+        console.log("Creating order summary:", orderSummary);
+        const docRef = await addDoc(collection(db, "orderSummaries"), orderSummary);
+        
+        console.log("Order summary created with ID:", docRef.id);
+        return {
+          id: docRef.id,
+          ...orderSummary,
+        } as OrderSummary;
+      } catch (error) {
+        console.error("Error creating order summary:", error);
+        throw new Error(`Failed to create order summary: ${error instanceof Error ? error.message : String(error)}`);
+      }
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["orderSummary", data.id], data);

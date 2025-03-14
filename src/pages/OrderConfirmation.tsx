@@ -5,21 +5,12 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { Check, ShoppingBag, X } from "lucide-react";
+import { Check, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateOrder, Order } from "@/hooks/useRealtimeOrders";
+import { useCreateOrder, Order } from "@/hooks/useOrders";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/storeSettings";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { sendOrderConfirmationEmail } from "@/lib/notifications";
 import { useCreateOrderSummary } from "@/hooks/useOrderSummaries";
 
@@ -34,45 +25,23 @@ const OrderConfirmation = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const orderProcessedRef = useRef(false);
-  const [showConfirmation, setShowConfirmation] = useState(true);
   const { settings } = useStoreSettings();
   const [orderSummaryId, setOrderSummaryId] = useState<string | null>(null);
-  const dialogForcedOpenRef = useRef(true);
-  const userClosedDialogRef = useRef(false);
-  const userNavigatedAwayRef = useRef(false);
   
   const orderDetails = location.state?.orderDetails;
   
-  // Force dialog to stay open for a minimum amount of time (20 seconds)
-  useEffect(() => {
-    if (dialogForcedOpenRef.current) {
-      const timer = setTimeout(() => {
-        console.log("Forced open period ended");
-        dialogForcedOpenRef.current = false;
-      }, 20000); // Force dialog to stay open for at least 20 seconds
-      
-      return () => clearTimeout(timer);
-    }
-  }, []);
-  
   useEffect(() => {
     // Reset state on component mount
-    setShowConfirmation(true);
-    userClosedDialogRef.current = false;
-    userNavigatedAwayRef.current = false;
-    
     if (!orderDetails || cartState.items.length === 0) {
-      console.log("No order details or empty cart, NOT redirecting to home");
-      // Don't redirect to avoid immediate navigation
-      // Only redirect if user actively came to this page without order details
+      console.log("No order details or empty cart, redirecting to home");
       if (!location.state) {
         navigate("/");
       }
       return;
     }
     
-    if (orderProcessedRef.current) {
-      console.log("Order already processed (ref), skipping creation");
+    if (orderProcessedRef.current || orderId) {
+      console.log("Order already processed, skipping creation");
       return;
     }
     
@@ -87,7 +56,7 @@ const OrderConfirmation = () => {
         orderProcessedRef.current = true;
         setOrderProcessed(true);
         
-        console.log("Starting order creation process with realtime database");
+        console.log("Starting order creation process");
         
         const orderItems = cartState.items.map(item => ({
           id: `${item.id}-${Date.now()}`,
@@ -129,7 +98,7 @@ const OrderConfirmation = () => {
           newOrder.discountAmount = orderDetails.discount;
         }
         
-        console.log("Submitting order to realtime database:", newOrder);
+        console.log("Submitting order:", newOrder);
         const createdOrder = await createOrder(newOrder);
         console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
@@ -179,16 +148,9 @@ const OrderConfirmation = () => {
         
         clearCart();
         
-        // Always ensure dialog stays open
-        setShowConfirmation(true);
-        
         toast.success("Order placed successfully!", {
           id: "order-success",
-          duration: 2000,
-          onDismiss: () => {
-            console.log("Toast dismissed, ensuring dialog stays open");
-            setShowConfirmation(true);
-          }
+          duration: 2000
         });
       } catch (error) {
         console.error("Error creating order:", error);
@@ -197,70 +159,11 @@ const OrderConfirmation = () => {
         setOrderProcessed(false);
       } finally {
         setIsLoading(false);
-        // Always make sure dialog is open
-        setTimeout(() => {
-          setShowConfirmation(true);
-        }, 200);
       }
     };
     
     createNewOrder();
-  }, [orderDetails, cartState, navigate, clearCart, createOrder, createOrderSummary, currentUser?.uid, orderProcessed, location.state]);
-  
-  // Handle dialog close attempts
-  const handleDialogClose = (open: boolean) => {
-    if (!open) {
-      // Prevent closing if loading or in forced open period
-      if (isLoading || dialogForcedOpenRef.current) {
-        console.log("Prevented dialog close - " + (isLoading ? "still loading" : "forced open period"));
-        setShowConfirmation(true);
-        return;
-      }
-      
-      // User explicitly closed the dialog
-      console.log("User closed order summary dialog");
-      userClosedDialogRef.current = true;
-      setShowConfirmation(false);
-      
-      // Don't automatically navigate away - let the user decide by clicking buttons
-    }
-  };
-  
-  // This useEffect ensures the dialog stays open when it should
-  useEffect(() => {
-    if (!showConfirmation && (dialogForcedOpenRef.current || isLoading) && !userClosedDialogRef.current) {
-      console.log("Dialog closed but should be open, reopening");
-      setShowConfirmation(true);
-    }
-  }, [showConfirmation, isLoading]);
-  
-  // Prevent navigation while dialog is forcibly open
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (dialogForcedOpenRef.current && !userNavigatedAwayRef.current) {
-        e.preventDefault();
-        e.returnValue = "Your order confirmation is still open. Are you sure you want to leave?";
-        return e.returnValue;
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
-  
-  // Handle navigation through buttons
-  const handleNavigation = (path: string) => {
-    // Only allow navigation if not in forced open period or user explicitly closed dialog
-    if (!dialogForcedOpenRef.current || userClosedDialogRef.current) {
-      userNavigatedAwayRef.current = true;
-      navigate(path);
-    } else {
-      // If in forced open period, let user know they need to wait
-      toast.info("Please wait a moment before navigating away from your order confirmation.", {
-        duration: 3000,
-      });
-    }
-  };
+  }, [orderDetails, cartState, navigate, clearCart, createOrder, createOrderSummary, currentUser?.uid, orderProcessed, location.state, orderId]);
   
   if (!orderDetails) {
     return (
@@ -339,6 +242,30 @@ const OrderConfirmation = () => {
           </div>
           
           <div className="bg-white p-6 rounded-lg border mb-8">
+            <h2 className="text-lg font-semibold mb-4">Items Ordered</h2>
+            <div className="divide-y">
+              {cartState.items.map((item, index) => (
+                <div key={index} className="py-3 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 rounded-md overflow-hidden border mr-3">
+                      <img 
+                        src={item.image} 
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-medium">{item.title}</p>
+                      <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
+                    </div>
+                  </div>
+                  <span>{formatPrice(item.price * item.quantity, settings)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="bg-white p-6 rounded-lg border mb-8">
             <h2 className="text-lg font-semibold mb-4">What's Next?</h2>
             
             <div className="space-y-4">
@@ -393,10 +320,10 @@ const OrderConfirmation = () => {
           </div>
           
           <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <Button variant="outline" onClick={() => handleNavigation("/account")}>
+            <Button variant="outline" onClick={() => navigate("/account")}>
               View Order History
             </Button>
-            <Button onClick={() => handleNavigation("/products")}>
+            <Button onClick={() => navigate("/products")}>
               <ShoppingBag className="mr-2 h-4 w-4" />
               Continue Shopping
             </Button>
@@ -405,88 +332,6 @@ const OrderConfirmation = () => {
       </main>
       
       <Footer />
-      
-      <AlertDialog 
-        open={showConfirmation} 
-        onOpenChange={handleDialogClose}
-      >
-        <AlertDialogContent className="max-w-md z-[100]">
-          <AlertDialogHeader>
-            <div className="flex justify-between items-center">
-              <AlertDialogTitle className="text-lg font-bold">Order Placed Successfully!</AlertDialogTitle>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6" 
-                onClick={() => {
-                  if (!isLoading && !dialogForcedOpenRef.current) {
-                    userClosedDialogRef.current = true;
-                    setShowConfirmation(false);
-                  }
-                }}
-                disabled={isLoading || dialogForcedOpenRef.current}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <AlertDialogDescription>
-              Your order has been successfully created and is being processed.
-              {dialogForcedOpenRef.current && (
-                <span className="block text-xs text-muted-foreground mt-1">
-                  This confirmation will stay open for at least 20 seconds to ensure you see all details.
-                </span>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <div className="border rounded-md p-4 mb-4 bg-secondary/30">
-            <div className="flex justify-between mb-2">
-              <span className="font-medium">Order ID:</span>
-              <span>{orderId || "Processing..."}</span>
-            </div>
-            <div className="flex justify-between mb-2">
-              <span className="font-medium">Date:</span>
-              <span>{new Date().toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between mb-2">
-              <span className="font-medium">Total:</span>
-              <span>{formatPrice(orderDetails?.total || 0, settings)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Status:</span>
-              <span className="text-amber-600 font-medium">Processing</span>
-            </div>
-          </div>
-          
-          {cartState.items.length > 0 && (
-            <div className="border rounded-md p-4 mb-4">
-              <h3 className="font-medium mb-2">Order Items:</h3>
-              <div className="max-h-40 overflow-y-auto">
-                {cartState.items.map((item, index) => (
-                  <div key={index} className="flex justify-between py-1 text-sm border-b last:border-b-0">
-                    <span>{item.title} x {item.quantity}</span>
-                    <span>{formatPrice(item.price * item.quantity, settings)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          <AlertDialogFooter>
-            <AlertDialogAction 
-              onClick={() => {
-                userClosedDialogRef.current = true;
-                userNavigatedAwayRef.current = true;
-                setShowConfirmation(false);
-                navigate("/account");
-              }}
-              disabled={isLoading || dialogForcedOpenRef.current}
-            >
-              {dialogForcedOpenRef.current ? "Please wait..." : "View Order History"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
