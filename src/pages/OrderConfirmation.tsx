@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { Check, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateOrder, Order } from "@/hooks/useOrders";
+import { useCreateOrder, Order } from "@/hooks/useRealtimeOrders"; // Updated import to use realtime orders
 import { useAuth } from "@/context/AuthContext";
 
 const OrderConfirmation = () => {
@@ -52,7 +52,7 @@ const OrderConfirmation = () => {
         orderProcessedRef.current = true;
         setOrderProcessed(true);
         
-        console.log("Starting order creation process");
+        console.log("Starting order creation process with realtime database");
         
         // Create order items from cart items
         const orderItems = cartState.items.map(item => ({
@@ -96,7 +96,7 @@ const OrderConfirmation = () => {
           newOrder.discountAmount = orderDetails.discount;
         }
         
-        console.log("Submitting order to database:", newOrder);
+        console.log("Submitting order to realtime database:", newOrder);
         // Save order to database and get the returned order with ID
         const createdOrder = await createOrder(newOrder);
         console.log("Order created successfully with ID:", createdOrder.id);

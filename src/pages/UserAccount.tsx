@@ -30,6 +30,7 @@ const UserAccount = () => {
   
   console.log("Current user in UserAccount:", currentUser?.uid);
   console.log("Current orders in UserAccount:", orders?.length || 0);
+  console.log("Orders data:", orders);
 
   useEffect(() => {
     if (!currentUser) {

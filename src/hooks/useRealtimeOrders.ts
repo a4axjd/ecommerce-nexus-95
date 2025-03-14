@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   ref, 
@@ -10,7 +9,8 @@ import {
   orderByChild, 
   equalTo, 
   onValue, 
-  off
+  off,
+  DatabaseReference
 } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
@@ -79,11 +79,14 @@ export const useOrders = () => {
   const ordersQueryRef = useRef<any>(null);
 
   useEffect(() => {
+    console.log("Setting up realtime listener for all orders");
     const ordersRef = ref(rtdb, 'orders');
     
     const handleOrdersUpdate = (snapshot: any) => {
+      console.log("Received orders update from realtime database");
       if (snapshot.exists()) {
         const ordersData = snapshot.val();
+        console.log("Orders data received:", ordersData ? Object.keys(ordersData).length : 0, "orders");
         const ordersArray = Object.keys(ordersData).map(key => ({
           id: key,
           ...ordersData[key]
@@ -94,13 +97,17 @@ export const useOrders = () => {
         
         queryClient.setQueryData(["orders"], ordersArray);
       } else {
+        console.log("No orders data in realtime database");
         queryClient.setQueryData(["orders"], []);
       }
     };
     
-    onValue(ordersRef, handleOrdersUpdate);
+    onValue(ordersRef, handleOrdersUpdate, (error) => {
+      console.error("Error in realtime orders listener:", error);
+    });
     
     return () => {
+      console.log("Cleaning up realtime orders listener");
       off(ordersRef);
     };
   }, [queryClient]);
@@ -109,14 +116,16 @@ export const useOrders = () => {
     queryKey: ["orders"],
     queryFn: async () => {
       console.log("Fetching all orders from realtime database");
+      const ordersRef = ref(rtdb, 'orders');
       const snapshot = await get(ordersRef);
       
       if (!snapshot.exists()) {
-        console.log("No orders found");
+        console.log("No orders found in realtime database fetch");
         return [];
       }
       
       const ordersData = snapshot.val();
+      console.log("Orders data fetched:", ordersData ? Object.keys(ordersData).length : 0, "orders");
       const ordersArray = Object.keys(ordersData).map(key => ({
         id: key,
         ...ordersData[key]
@@ -125,7 +134,6 @@ export const useOrders = () => {
       // Sort by createdAt in descending order
       ordersArray.sort((a, b) => b.createdAt - a.createdAt);
       
-      console.log("Fetched orders:", ordersArray.length);
       return ordersArray;
     },
     staleTime: 0, // Always refetch to ensure data is fresh
@@ -194,11 +202,17 @@ export const useUserOrders = () => {
     }
     
     console.log("Setting up real-time user orders listener for:", currentUser.uid);
-    const userOrdersRef = dbQuery(ref(rtdb, 'orders'), orderByChild('userId'), equalTo(currentUser.uid));
+    const userOrdersRef = dbQuery(
+      ref(rtdb, 'orders'), 
+      orderByChild('userId'), 
+      equalTo(currentUser.uid)
+    );
     
     const userOrdersListener = onValue(userOrdersRef, (snapshot) => {
+      console.log("Received user orders update from realtime database");
       if (snapshot.exists()) {
         const userOrdersData = snapshot.val();
+        console.log("User orders data received:", userOrdersData ? Object.keys(userOrdersData).length : 0, "orders");
         const userOrdersArray = Object.keys(userOrdersData).map(key => ({
           id: key,
           ...userOrdersData[key]
@@ -207,7 +221,7 @@ export const useUserOrders = () => {
         // Sort by createdAt in descending order
         userOrdersArray.sort((a, b) => b.createdAt - a.createdAt);
         
-        console.log("Real-time user orders update, count:", userOrdersArray.length);
+        console.log("Setting user orders in query cache, count:", userOrdersArray.length);
         
         queryClient.setQueryData(["userOrders", currentUser.uid], userOrdersArray);
         
@@ -216,7 +230,7 @@ export const useUserOrders = () => {
           queryClient.setQueryData(["order", order.id], order);
         });
       } else {
-        console.log("No orders found for user");
+        console.log("No orders found for user in realtime database");
         queryClient.setQueryData(["userOrders", currentUser.uid], []);
       }
       
@@ -244,7 +258,12 @@ export const useUserOrders = () => {
       if (!currentUser) return [];
       
       console.log("Initial fetch of user orders for:", currentUser.uid);
-      const userOrdersRef = dbQuery(ref(rtdb, 'orders'), orderByChild('userId'), equalTo(currentUser.uid));
+      const userOrdersRef = dbQuery(
+        ref(rtdb, 'orders'), 
+        orderByChild('userId'), 
+        equalTo(currentUser.uid)
+      );
+      
       const snapshot = await get(userOrdersRef);
       
       if (!snapshot.exists()) {
@@ -253,6 +272,7 @@ export const useUserOrders = () => {
       }
       
       const userOrdersData = snapshot.val();
+      console.log("User orders data fetched:", userOrdersData ? Object.keys(userOrdersData).length : 0, "orders");
       const userOrdersArray = Object.keys(userOrdersData).map(key => ({
         id: key,
         ...userOrdersData[key]
@@ -260,8 +280,6 @@ export const useUserOrders = () => {
       
       // Sort by createdAt in descending order
       userOrdersArray.sort((a, b) => b.createdAt - a.createdAt);
-      
-      console.log("Initial user orders fetch complete, count:", userOrdersArray.length);
       
       // Store each order individually in the cache
       userOrdersArray.forEach(order => {
@@ -271,9 +289,8 @@ export const useUserOrders = () => {
       return userOrdersArray;
     },
     enabled: !!currentUser,
-    staleTime: 60000, // 1 minute stale time
+    staleTime: 0, // Reduce to 0 to always refetch when needed
     initialData: () => {
-      // Use cached data if available
       return queryClient.getQueryData(["userOrders", currentUser?.uid]) as Order[] || [];
     },
   });
@@ -287,14 +304,17 @@ export const useCreateOrder = () => {
     mutationFn: async (orderData: Omit<Order, "id">) => {
       console.log("Creating new order in realtime database:", orderData);
       
-      // Generate idempotency key if not present to prevent duplicate orders
       if (!idempotencyKeyRef.current) {
         idempotencyKeyRef.current = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       }
       
+      if (!rtdb) {
+        console.error("Realtime Database not initialized!");
+        throw new Error("Realtime Database not initialized");
+      }
+      
       const cleanedOrder = removeUndefinedValues(orderData);
       
-      // Validation
       if (!cleanedOrder.userId) {
         throw new Error("Order must have a user ID");
       }
@@ -321,11 +341,10 @@ export const useCreateOrder = () => {
         }
       });
       
-      // Add timestamps
       cleanedOrder.createdAt = Date.now();
       cleanedOrder.updatedAt = Date.now();
       
-      // Create a new reference with push() to get a unique ID
+      console.log("Creating order with reference:", ordersRef);
       const newOrderRef = push(ordersRef);
       const orderId = newOrderRef.key;
       
@@ -333,8 +352,13 @@ export const useCreateOrder = () => {
         throw new Error("Failed to generate order ID");
       }
       
-      // Set the data at the new reference
-      await set(newOrderRef, cleanedOrder);
+      try {
+        await set(newOrderRef, cleanedOrder);
+        console.log("Order data saved successfully to path:", newOrderRef.toString());
+      } catch (error) {
+        console.error("Error saving order data:", error);
+        throw new Error(`Failed to save order data: ${error}`);
+      }
       
       await trackOrderCompletion();
       
@@ -345,7 +369,6 @@ export const useCreateOrder = () => {
       
       console.log("Order created with ID:", orderId);
       
-      // Reset idempotency key after successful creation
       setTimeout(() => {
         idempotencyKeyRef.current = "";
       }, 5000);
@@ -355,10 +378,8 @@ export const useCreateOrder = () => {
     onSuccess: (data) => {
       console.log("Order creation successful, updating cache");
       
-      // Update the single order query
       queryClient.setQueryData(["order", data.id], data);
       
-      // Update the user's orders list
       queryClient.setQueryData(["userOrders", data.userId], (oldData: Order[] | undefined) => {
         if (!oldData) return [data];
         
@@ -371,7 +392,17 @@ export const useCreateOrder = () => {
         return [data, ...oldData];
       });
       
-      // Invalidate queries to refetch fresh data
+      queryClient.setQueryData(["orders"], (oldData: Order[] | undefined) => {
+        if (!oldData) return [data];
+        
+        const orderExists = oldData.some(order => order.id === data.id);
+        if (orderExists) {
+          return oldData;
+        }
+        
+        return [data, ...oldData];
+      });
+      
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["userOrders", data.userId] });
       queryClient.invalidateQueries({ queryKey: ["analytics"] });
@@ -413,10 +444,8 @@ export const useUpdateOrderStatus = () => {
     onSuccess: (updatedOrder) => {
       console.log("Order status updated successfully:", updatedOrder);
       
-      // Update the individual order in cache
       queryClient.setQueryData(["order", updatedOrder.id], updatedOrder);
       
-      // Update the order in the user's orders list
       queryClient.setQueryData(["userOrders", updatedOrder.userId], (oldData: Order[] | undefined) => {
         if (!oldData) return [updatedOrder];
         
@@ -425,7 +454,6 @@ export const useUpdateOrderStatus = () => {
         );
       });
       
-      // Update the order in the all orders list
       queryClient.setQueryData(["orders"], (oldData: Order[] | undefined) => {
         if (!oldData) return [updatedOrder];
         
@@ -434,7 +462,6 @@ export const useUpdateOrderStatus = () => {
         );
       });
       
-      // Invalidate queries to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       queryClient.invalidateQueries({ queryKey: ["order", updatedOrder.id] });
       queryClient.invalidateQueries({ queryKey: ["userOrders", updatedOrder.userId] });
