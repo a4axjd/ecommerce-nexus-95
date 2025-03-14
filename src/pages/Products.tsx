@@ -14,6 +14,7 @@ import {
 import { ChevronDown, Filter, Search } from "lucide-react";
 import { useProducts } from "@/hooks/useProducts";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
 
 type SortOption = "price-asc" | "price-desc" | "name-asc" | "name-desc";
 
@@ -28,6 +29,8 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState("");
   
   const { data: products = [], isLoading } = useProducts();
+  // Get store settings to pass to product cards
+  const { settings } = useStoreSettings();
 
   // Extract all unique categories from products
   const allCategories = products ? [...new Set(products.map(product => product.category))] : [];

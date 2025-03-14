@@ -9,6 +9,14 @@ import { Check, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCreateOrder, Order } from "@/hooks/useRealtimeOrders"; // Updated import to use realtime orders
 import { useAuth } from "@/context/AuthContext";
+import { 
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 
 const OrderConfirmation = () => {
   const location = useLocation();
@@ -19,6 +27,7 @@ const OrderConfirmation = () => {
   const [orderProcessed, setOrderProcessed] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
   const orderProcessedRef = useRef(false);
   
   // Get order details from location state
@@ -105,7 +114,9 @@ const OrderConfirmation = () => {
         // Clear cart after successful order
         clearCart();
         
+        // Show success message and open alert dialog
         toast.success("Order placed successfully!");
+        setIsAlertOpen(true);
       } catch (error) {
         console.error("Error creating order:", error);
         toast.error("Failed to create order: " + (error instanceof Error ? error.message : String(error)));
@@ -264,6 +275,26 @@ const OrderConfirmation = () => {
       </main>
       
       <Footer />
+
+      {/* Order Confirmation Alert Dialog that stays open until user dismisses it */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <Check className="h-5 w-5 text-green-600" />
+            Order Confirmed!
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            <p className="mb-2">Your order has been successfully placed.</p>
+            {orderId && (
+              <p className="font-medium">Order ID: {orderId}</p>
+            )}
+            <p className="mt-2">You'll receive an email confirmation shortly.</p>
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogAction>Close</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
