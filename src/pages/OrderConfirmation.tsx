@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -19,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { sendOrderConfirmationEmail } from "@/lib/notifications";
 
 const OrderConfirmation = () => {
   const location = useLocation();
@@ -34,6 +36,9 @@ const OrderConfirmation = () => {
   const { settings } = useStoreSettings();
   
   const orderDetails = location.state?.orderDetails;
+  
+  // Use this ref to prevent the confirmation dialog from auto-closing
+  const preventAutoCloseRef = useRef(true);
   
   useEffect(() => {
     if (!orderDetails || cartState.items.length === 0) {
@@ -105,10 +110,38 @@ const OrderConfirmation = () => {
         console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
         
+        // Attempt to send confirmation email if customer email is available
+        if (orderDetails.shippingAddress.email) {
+          try {
+            console.log("Sending order confirmation email");
+            await sendOrderConfirmationEmail(
+              orderDetails.shippingAddress.email,
+              {
+                orderId: createdOrder.id,
+                items: orderItems,
+                total: orderDetails.total,
+                shippingAddress: orderDetails.shippingAddress
+              }
+            );
+          } catch (emailError) {
+            console.error("Failed to send confirmation email:", emailError);
+            // Don't throw here - we don't want to fail the order if email fails
+          }
+        }
+        
         clearCart();
         
+        // Make sure the confirmation dialog stays open
         setShowConfirmation(true);
-        toast.success("Order placed successfully!");
+        
+        // Use a custom toast that won't interfere with the dialog
+        toast.success("Order placed successfully!", {
+          duration: 3000,
+          onAutoClose: () => {
+            // Ensure the confirmation dialog stays open after toast closes
+            setShowConfirmation(true);
+          }
+        });
       } catch (error) {
         console.error("Error creating order:", error);
         toast.error("Failed to create order: " + (error instanceof Error ? error.message : String(error)));
@@ -121,6 +154,17 @@ const OrderConfirmation = () => {
     
     createNewOrder();
   }, [orderDetails, cartState, navigate, clearCart, createOrder, currentUser?.uid, orderProcessed]);
+  
+  // Explicitly handle dialog close to prevent accidental dismissal
+  const handleDialogClose = (open: boolean) => {
+    // Only allow manual closing after loading is complete
+    if (!isLoading && !open) {
+      setShowConfirmation(open);
+    } else {
+      // Force dialog to stay open during loading
+      setShowConfirmation(true);
+    }
+  };
   
   if (!orderDetails) {
     return (
@@ -266,7 +310,10 @@ const OrderConfirmation = () => {
       
       <Footer />
       
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+      <AlertDialog 
+        open={showConfirmation} 
+        onOpenChange={handleDialogClose}
+      >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <div className="flex justify-between items-center">
@@ -276,6 +323,7 @@ const OrderConfirmation = () => {
                 size="icon" 
                 className="h-6 w-6" 
                 onClick={() => setShowConfirmation(false)}
+                disabled={isLoading}
               >
                 <X className="h-4 w-4" />
               </Button>
