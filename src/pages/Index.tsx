@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -18,6 +19,7 @@ import { useFeaturedProducts, useProducts } from "@/hooks/useProducts";
 import { useFeaturedBlogs } from "@/hooks/useBlogs";
 import { HeroCarousel } from "@/components/HeroCarousel";
 import { TrendingProducts } from "@/components/TrendingProducts";
+import { InstagramFeed } from "@/components/InstagramFeed";
 import { NewsletterSignup } from "@/components/NewsletterSignup";
 
 const CATEGORIES = [
@@ -239,7 +241,7 @@ const Index = () => {
                 Check out how our community styles Nytheris pieces
               </p>
             </div>
-            
+            <InstagramFeed />
           </div>
         </section>
 
