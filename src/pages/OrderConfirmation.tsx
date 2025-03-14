@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -31,45 +30,38 @@ const OrderConfirmation = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const orderProcessedRef = useRef(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(true);
   const { settings } = useStoreSettings();
   
-  // Get order details from location state
   const orderDetails = location.state?.orderDetails;
   
   useEffect(() => {
-    // If no order details or cart is empty, redirect to home
     if (!orderDetails || cartState.items.length === 0) {
       console.log("No order details or empty cart, redirecting to home");
       navigate("/");
       return;
     }
     
-    // Use ref to prevent duplicate order creation
     if (orderProcessedRef.current) {
       console.log("Order already processed (ref), skipping creation");
       return;
     }
     
     const createNewOrder = async () => {
-      // Exit early if order was already processed
       if (orderProcessed) {
         console.log("Order already processed (state), skipping creation");
         return;
       }
       
       try {
-        // Set loading state
         setIsLoading(true);
-        // Set processed state immediately to prevent duplicate submissions (both ref and state)
         orderProcessedRef.current = true;
         setOrderProcessed(true);
         
         console.log("Starting order creation process with realtime database");
         
-        // Create order items from cart items
         const orderItems = cartState.items.map(item => ({
-          id: `${item.id}-${Date.now()}`, // Generate a unique ID for each order item
+          id: `${item.id}-${Date.now()}`,
           productId: item.id,
           title: item.title,
           price: item.price,
@@ -80,7 +72,6 @@ const OrderConfirmation = () => {
           category: item.category || ""
         }));
         
-        // Create new order with required fields
         const newOrder: Omit<Order, "id"> = {
           userId: currentUser?.uid || "guest",
           items: orderItems,
@@ -101,7 +92,6 @@ const OrderConfirmation = () => {
           updatedAt: Date.now()
         };
         
-        // Add coupon code and discount amount if available
         if (orderDetails.couponCode) {
           newOrder.couponCode = orderDetails.couponCode;
         }
@@ -111,21 +101,17 @@ const OrderConfirmation = () => {
         }
         
         console.log("Submitting order to realtime database:", newOrder);
-        // Save order to database and get the returned order with ID
         const createdOrder = await createOrder(newOrder);
         console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
         
-        // Clear cart after successful order
         clearCart();
         
-        // Show the confirmation dialog that won't auto-close
         setShowConfirmation(true);
         toast.success("Order placed successfully!");
       } catch (error) {
         console.error("Error creating order:", error);
         toast.error("Failed to create order: " + (error instanceof Error ? error.message : String(error)));
-        // Reset state on error to allow retry
         orderProcessedRef.current = false;
         setOrderProcessed(false);
       } finally {
@@ -136,7 +122,6 @@ const OrderConfirmation = () => {
     createNewOrder();
   }, [orderDetails, cartState, navigate, clearCart, createOrder, currentUser?.uid, orderProcessed]);
   
-  // If no order details, show loading or redirect
   if (!orderDetails) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -281,7 +266,6 @@ const OrderConfirmation = () => {
       
       <Footer />
       
-      {/* Order confirmation dialog that stays open until user dismisses it */}
       <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
@@ -312,7 +296,7 @@ const OrderConfirmation = () => {
             </div>
             <div className="flex justify-between mb-2">
               <span className="font-medium">Total:</span>
-              <span>{formatPrice(orderDetails.total, settings)}</span>
+              <span>{formatPrice(orderDetails?.total || 0, settings)}</span>
             </div>
             <div className="flex justify-between">
               <span className="font-medium">Status:</span>

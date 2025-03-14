@@ -1,4 +1,3 @@
-
 import { collection, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 
@@ -17,14 +16,14 @@ export interface StoreSettings {
 
 export const defaultStoreSettings: StoreSettings = {
   currency: {
-    code: "USD",
-    symbol: "$",
+    code: "PKR",
+    symbol: "₨",
     position: "before"
   },
   region: {
-    country: "United States",
-    countryCode: "US",
-    timezone: "America/New_York"
+    country: "Pakistan",
+    countryCode: "PK",
+    timezone: "Asia/Karachi"
   }
 };
 
@@ -64,7 +63,7 @@ export const updateStoreSettings = async (settings: StoreSettings): Promise<void
 
 // Format a price according to the store's currency settings
 export const formatPrice = (price: number, settings?: StoreSettings): string => {
-  // Default to USD if settings not provided
+  // Default to PKR if settings not provided
   const currency = settings?.currency || defaultStoreSettings.currency;
   
   // Format the number with the appropriate decimal places

@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { useProduct, useProducts } from "@/hooks/useProducts";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { formatPrice } from "@/lib/storeSettings";
 import { 
   collection, 
   addDoc, 
@@ -50,6 +52,7 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { currentUser } = useAuth();
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([]);
+  const { settings } = useStoreSettings();
   
   const { data: product, isLoading } = useProduct(id || "");
   const { data: allProducts = [] } = useProducts();
@@ -366,7 +369,7 @@ const ProductDetail = () => {
                   </div>
                 </div>
                 <h1 className="text-3xl font-semibold">{product?.title}</h1>
-                <p className="text-2xl font-bold mt-2">${productPrice.toFixed(2)}</p>
+                <p className="text-2xl font-bold mt-2">{formatPrice(productPrice, settings)}</p>
               </div>
 
               <div className="flex items-center space-x-4 text-sm text-muted-foreground">
@@ -643,7 +646,7 @@ const ProductDetail = () => {
                 
                 <h3 className="mt-6">Return Policy</h3>
                 <p>
-                  {product?.returnPolicy || "If you're not completely satisfied with your purchase, you may return it within 30 days of receipt for a full refund of the item price. To be eligible for a return, your item must be in the same condition that you received it, unworn or unused, with tags, and in its original packaging."}
+                  {product?.returnPolicy || "If you're not completely satisfied with your purchase, you may return it within 30 days of receipt for a full refund of the item price. To be eligible for a return, your item must be in the same condition that you received, unworn or unused, with tags, and in its original packaging."}
                 </p>
                 
                 <h4 className="mt-4">How to Return</h4>
