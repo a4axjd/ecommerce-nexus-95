@@ -22,13 +22,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useOrders, Order, useUpdateOrderStatus } from "@/hooks/useOrders";
+import { useOrders, Order, useUpdateOrderStatus } from "@/hooks/useRealtimeOrders";
 import { Search, Bell } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { AdminSidebar } from "@/components/AdminSidebar";
-import { collection, onSnapshot, query, orderBy, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { ref, query as dbQuery, orderByChild, startAt, onValue, off } from "firebase/database";
+import { rtdb } from "@/lib/firebase";
 
 const OrdersAdmin = () => {
   const { data: orders = [], isLoading, refetch } = useOrders();
@@ -49,14 +49,14 @@ const OrdersAdmin = () => {
       newOrdersListenerRef.current = undefined;
     }
     
-    const q = query(
-      collection(db, "orders"),
-      where("createdAt", ">", lastCheckedTime.getTime()),
-      orderBy("createdAt", "desc")
+    const q = dbQuery(
+      ref(rtdb, "orders"),
+      orderByChild("createdAt"),
+      startAt(lastCheckedTime.getTime())
     );
     
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newOrders = snapshot.docs.length;
+    const unsubscribe = onValue(q, (snapshot) => {
+      const newOrders = snapshot.numChildren();
       
       if (newOrders > 0 && lastChecked > 0) {
         setNewOrdersCount(prevCount => prevCount + newOrders);

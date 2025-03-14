@@ -9,7 +9,7 @@ import { db } from "@/lib/firebase";
 import { ProductCard } from "@/components/ProductCard";
 import { toast } from "sonner";
 import { User, Package, Heart, CreditCard, LogOut, Clock } from "lucide-react";
-import { useUserOrders } from "@/hooks/useOrders";
+import { useUserOrders } from "@/hooks/useRealtimeOrders";
 
 interface WishlistProduct {
   id: string;
