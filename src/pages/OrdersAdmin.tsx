@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +57,14 @@ const OrdersAdmin = () => {
     );
     
     const unsubscribe = onValue(q, (snapshot) => {
-      const newOrders = snapshot.numChildren();
+      // Fix: Use size() method to get the count or manually count children
+      let newOrders = 0;
+      
+      // Count children in the snapshot
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        newOrders = Object.keys(data).length;
+      }
       
       if (newOrders > 0 && lastChecked > 0) {
         setNewOrdersCount(prevCount => prevCount + newOrders);
