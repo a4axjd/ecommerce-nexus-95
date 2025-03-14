@@ -304,6 +304,20 @@ const OrderConfirmation = () => {
             </div>
           </div>
           
+          {cartState.items.length > 0 && (
+            <div className="border rounded-md p-4 mb-4">
+              <h3 className="font-medium mb-2">Order Items:</h3>
+              <div className="max-h-40 overflow-y-auto">
+                {cartState.items.map((item, index) => (
+                  <div key={index} className="flex justify-between py-1 text-sm border-b last:border-b-0">
+                    <span>{item.title} x {item.quantity}</span>
+                    <span>{formatPrice(item.price * item.quantity, settings)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => {
               setShowConfirmation(false);
