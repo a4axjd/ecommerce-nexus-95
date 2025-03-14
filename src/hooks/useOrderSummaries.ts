@@ -35,6 +35,28 @@ export interface OrderSummary {
   couponCode?: string;
 }
 
+// Helper function to remove undefined values from an object
+const removeUndefinedValues = (obj: any): any => {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => removeUndefinedValues(item));
+  }
+
+  const cleanedObj: Record<string, any> = {};
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined) {
+      cleanedObj[key] = typeof obj[key] === 'object' 
+        ? removeUndefinedValues(obj[key]) 
+        : obj[key];
+    }
+  });
+  
+  return cleanedObj;
+};
+
 export const useOrderSummaries = () => {
   const { currentUser } = useAuth();
   
@@ -87,12 +109,18 @@ export const useCreateOrderSummary = () => {
     mutationFn: async (orderSummary: Omit<OrderSummary, "id">) => {
       try {
         console.log("Creating order summary:", orderSummary);
-        const docRef = await addDoc(collection(db, "orderSummaries"), orderSummary);
+        
+        // Clean the orderSummary object to remove all undefined values
+        const cleanedOrderSummary = removeUndefinedValues(orderSummary);
+        
+        console.log("Cleaned order summary:", cleanedOrderSummary);
+        
+        const docRef = await addDoc(collection(db, "orderSummaries"), cleanedOrderSummary);
         
         console.log("Order summary created with ID:", docRef.id);
         return {
           id: docRef.id,
-          ...orderSummary,
+          ...cleanedOrderSummary,
         } as OrderSummary;
       } catch (error) {
         console.error("Error creating order summary:", error);

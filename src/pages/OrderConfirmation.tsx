@@ -103,7 +103,7 @@ const OrderConfirmation = () => {
         console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
         
-        // Create order summary in Firestore
+        // Create order summary in Firestore - make sure we don't pass undefined values
         const orderSummary = {
           userId: currentUser?.uid || "guest",
           orderId: createdOrder.id,
@@ -115,13 +115,14 @@ const OrderConfirmation = () => {
             title: item.title,
             price: item.price,
             quantity: item.quantity,
-            image: item.image
+            image: item.image || ""
           })),
           shippingAddress: orderDetails.shippingAddress,
           viewed: false,
           createdAt: Date.now(),
-          discount: orderDetails.discount > 0 ? orderDetails.discount : undefined,
-          couponCode: orderDetails.couponCode || undefined
+          // Only add these fields if they have values
+          ...(orderDetails.discount > 0 ? { discount: orderDetails.discount } : {}),
+          ...(orderDetails.couponCode ? { couponCode: orderDetails.couponCode } : {})
         };
         
         console.log("Creating order summary in Firestore");
