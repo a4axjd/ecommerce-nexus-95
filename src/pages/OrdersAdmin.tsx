@@ -85,11 +85,18 @@ const OrdersAdmin = () => {
     
     newOrdersListenerRef.current = unsubscribe;
     
+    // Auto-refresh orders every 30 seconds
+    const refreshInterval = setInterval(() => {
+      console.log("Auto-refreshing orders");
+      refetch();
+    }, 30000);
+    
     return () => {
       if (newOrdersListenerRef.current) {
         newOrdersListenerRef.current();
         newOrdersListenerRef.current = undefined;
       }
+      clearInterval(refreshInterval);
     };
   }, [lastChecked, refetch]);
   

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
 import { Check, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateOrder, Order } from "@/hooks/useOrders";
+import { useCreateOrder, Order } from "@/hooks/useRealtimeOrders";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/storeSettings";
 import { useStoreSettings } from "@/hooks/useStoreSettings";

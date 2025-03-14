@@ -76,6 +76,7 @@ export const useOrders = () => {
       console.log("Fetched orders:", orders);
       return orders;
     },
+    staleTime: 60000,
   });
 };
 
