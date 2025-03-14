@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -21,12 +22,15 @@ import {
   ShieldCheck, 
   ShoppingBag, 
   Trash,
-  Banknote
+  Banknote,
+  ArrowLeft
 } from "lucide-react";
 import { ProductCard } from "@/components/ProductCard";
 import { useProducts } from "@/hooks/useProducts";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { formatPrice } from "@/lib/storeSettings";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { useCreateOrderSummary } from "@/hooks/useOrderSummaries";
 
 const steps = ["Cart", "Shipping", "Payment", "Confirmation"];
 
@@ -49,10 +53,12 @@ const Checkout = () => {
   const [couponCode, setCouponCode] = useState("");
   const [isApplying, setIsApplying] = useState(false);
   const [discount, setDiscount] = useState(0);
+  const [orderSummaryCreated, setOrderSummaryCreated] = useState(false);
   
   const { state: cartState, updateQuantity, removeFromCart, clearCart } = useCart();
   const { data: allProducts = [] } = useProducts();
   const { currentUser } = useAuth(); // Get the current user
+  const { mutateAsync: createOrderSummary } = useCreateOrderSummary();
   
   // Update shipping country when store settings change
   useEffect(() => {
@@ -97,8 +103,42 @@ const Checkout = () => {
     }, 1000);
   };
 
-  const handleShippingSubmit = (e: React.FormEvent) => {
+  const handleShippingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Create order summary when shipping form is submitted
+    if (currentUser && !orderSummaryCreated) {
+      try {
+        // Create temporary order ID
+        const tempOrderId = Date.now().toString();
+        
+        // Create order summary
+        await createOrderSummary({
+          userId: currentUser.uid,
+          orderId: tempOrderId,
+          date: new Date().toISOString(),
+          total: total,
+          paymentMethod: "Not selected yet",
+          items: cartState.items.map(item => ({
+            id: item.id,
+            title: item.title,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image
+          })),
+          shippingAddress: shippingInfo,
+          viewed: false,
+          createdAt: Date.now(),
+          discount: discount > 0 ? discount : undefined,
+          couponCode: discount > 0 ? couponCode : undefined
+        });
+        
+        setOrderSummaryCreated(true);
+      } catch (error) {
+        console.error("Failed to create order summary:", error);
+      }
+    }
+    
     setCurrentStep(2);
   };
 
@@ -157,6 +197,57 @@ const Checkout = () => {
     );
   }
 
+  // Render Order Summary Card after shipping information is submitted
+  const renderOrderSummaryCard = () => {
+    if (currentStep === 1 && orderSummaryCreated) {
+      return (
+        <div className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Order Summary</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subtotal</span>
+                <span>{formatPrice(subtotal, settings)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Shipping</span>
+                <span>{formatPrice(shipping, settings)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tax</span>
+                <span>{formatPrice(tax, settings)}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount</span>
+                  <span>-{formatPrice(discount, settings)}</span>
+                </div>
+              )}
+              <Separator className="my-2" />
+              <div className="flex justify-between font-bold">
+                <span>Total</span>
+                <span>{formatPrice(total, settings)}</span>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-between pt-2">
+              <Button variant="outline" onClick={() => setCurrentStep(0)}>
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Cart
+              </Button>
+              <Button onClick={() => setCurrentStep(2)}>
+                Continue to Payment
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -185,6 +276,9 @@ const Checkout = () => {
             ))}
           </div>
         </div>
+
+        {/* Display Order Summary Card after shipping info is entered */}
+        {renderOrderSummaryCard()}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 max-w-6xl mx-auto">
           {/* Main checkout form */}
