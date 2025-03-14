@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -20,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { sendOrderConfirmationEmail } from "@/lib/notifications";
+import { useCreateOrderSummary } from "@/hooks/useOrderSummaries";
 
 const OrderConfirmation = () => {
   const location = useLocation();
@@ -27,14 +29,28 @@ const OrderConfirmation = () => {
   const { state: cartState, clearCart } = useCart();
   const { currentUser } = useAuth();
   const { mutateAsync: createOrder } = useCreateOrder();
+  const { mutateAsync: createOrderSummary } = useCreateOrderSummary();
   const [orderProcessed, setOrderProcessed] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const orderProcessedRef = useRef(false);
   const [showConfirmation, setShowConfirmation] = useState(true);
   const { settings } = useStoreSettings();
+  const [orderSummaryId, setOrderSummaryId] = useState<string | null>(null);
+  const dialogForcedOpenRef = useRef(true);
   
   const orderDetails = location.state?.orderDetails;
+  
+  useEffect(() => {
+    // Force dialog to stay open for a minimum amount of time
+    if (dialogForcedOpenRef.current) {
+      const timer = setTimeout(() => {
+        dialogForcedOpenRef.current = false;
+      }, 10000); // Force dialog to stay open for at least 10 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, []);
   
   useEffect(() => {
     setShowConfirmation(true);
@@ -108,6 +124,38 @@ const OrderConfirmation = () => {
         console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
         
+        // Create order summary in realtime database
+        const orderSummary = {
+          userId: currentUser?.uid || "guest",
+          orderId: createdOrder.id,
+          date: new Date().toISOString(),
+          total: orderDetails.total,
+          paymentMethod: orderDetails.paymentMethod || "card",
+          items: cartState.items.map(item => ({
+            id: item.id,
+            title: item.title,
+            price: item.price,
+            quantity: item.quantity,
+            image: item.image
+          })),
+          shippingAddress: orderDetails.shippingAddress,
+          viewed: false,
+          createdAt: Date.now()
+        };
+        
+        if (orderDetails.discount > 0) {
+          orderSummary.discount = orderDetails.discount;
+        }
+        
+        if (orderDetails.couponCode) {
+          orderSummary.couponCode = orderDetails.couponCode;
+        }
+        
+        console.log("Creating order summary in realtime database");
+        const createdSummary = await createOrderSummary(orderSummary);
+        console.log("Order summary created with ID:", createdSummary.id);
+        setOrderSummaryId(createdSummary.id);
+        
         if (orderDetails.shippingAddress.email) {
           try {
             console.log("Sending order confirmation email");
@@ -127,12 +175,12 @@ const OrderConfirmation = () => {
         
         clearCart();
         
-        setTimeout(() => {
-          setShowConfirmation(true);
-        }, 100);
+        // Always ensure dialog stays open
+        setShowConfirmation(true);
         
         toast.success("Order placed successfully!", {
           id: "order-success",
+          duration: 2000,
           onDismiss: () => {
             console.log("Toast dismissed, ensuring dialog stays open");
             setShowConfirmation(true);
@@ -145,6 +193,7 @@ const OrderConfirmation = () => {
         setOrderProcessed(false);
       } finally {
         setIsLoading(false);
+        // Always make sure dialog is open
         setTimeout(() => {
           setShowConfirmation(true);
         }, 200);
@@ -152,11 +201,18 @@ const OrderConfirmation = () => {
     };
     
     createNewOrder();
-  }, [orderDetails, cartState, navigate, clearCart, createOrder, currentUser?.uid, orderProcessed]);
+  }, [orderDetails, cartState, navigate, clearCart, createOrder, createOrderSummary, currentUser?.uid, orderProcessed]);
   
   const handleDialogClose = (open: boolean) => {
     if (!open) {
       if (!isLoading) {
+        // Always prevent closing if we are in the forced open period
+        if (dialogForcedOpenRef.current) {
+          console.log("Preventing dialog close - forced open period");
+          setShowConfirmation(true);
+          return;
+        }
+        
         if (orderId) {
           console.log("Manual dialog close - allowing");
           setShowConfirmation(false);
@@ -171,6 +227,15 @@ const OrderConfirmation = () => {
     }
   };
   
+  // This useEffect ensures the dialog stays open even if other 
+  // toast notifications or events try to close it
+  useEffect(() => {
+    if (!showConfirmation && (dialogForcedOpenRef.current || isLoading || !orderId)) {
+      console.log("Dialog closed but should be open, reopening");
+      setShowConfirmation(true);
+    }
+  }, [showConfirmation, isLoading, orderId]);
+  
   if (!orderDetails) {
     return (
       <div className="flex flex-col min-h-screen">
@@ -182,13 +247,6 @@ const OrderConfirmation = () => {
       </div>
     );
   }
-  
-  useEffect(() => {
-    if (orderDetails && !orderId && !isLoading && !orderProcessed) {
-      console.log("On order confirmation page but no processing has started");
-      setShowConfirmation(true);
-    }
-  }, [orderDetails, orderId, isLoading, orderProcessed]);
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -326,7 +384,7 @@ const OrderConfirmation = () => {
         open={showConfirmation} 
         onOpenChange={handleDialogClose}
       >
-        <AlertDialogContent className="max-w-md z-[1000]">
+        <AlertDialogContent className="max-w-md z-[100]">
           <AlertDialogHeader>
             <div className="flex justify-between items-center">
               <AlertDialogTitle className="text-lg font-bold">Order Placed Successfully!</AlertDialogTitle>
@@ -335,17 +393,22 @@ const OrderConfirmation = () => {
                 size="icon" 
                 className="h-6 w-6" 
                 onClick={() => {
-                  if (!isLoading && orderId) {
+                  if (!isLoading && orderId && !dialogForcedOpenRef.current) {
                     setShowConfirmation(false);
                   }
                 }}
-                disabled={isLoading || !orderId}
+                disabled={isLoading || !orderId || dialogForcedOpenRef.current}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
             <AlertDialogDescription>
               Your order has been successfully created and is being processed.
+              {dialogForcedOpenRef.current && (
+                <span className="block text-xs text-muted-foreground mt-1">
+                  This confirmation will stay open for at least 10 seconds to ensure you see all details.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           
@@ -388,9 +451,9 @@ const OrderConfirmation = () => {
                 setShowConfirmation(false);
                 navigate("/account");
               }}
-              disabled={isLoading || !orderId}
+              disabled={isLoading || !orderId || dialogForcedOpenRef.current}
             >
-              View Order History
+              {dialogForcedOpenRef.current ? "Please wait..." : "View Order History"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
