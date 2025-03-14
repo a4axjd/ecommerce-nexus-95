@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useReducer, ReactNode } from "react";
 import { trackCartAddition } from "@/hooks/useAnalytics";
 
@@ -8,7 +7,6 @@ interface CartItem {
   price: number;
   image: string;
   quantity: number;
-  category: string; // Added category property
   color?: string;
   size?: string;
 }
