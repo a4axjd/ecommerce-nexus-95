@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,8 @@ import { useAuth } from "@/context/AuthContext";
 import { doc, updateDoc, arrayUnion, arrayRemove, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { toast } from "sonner";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
+import { formatPrice } from "@/lib/storeSettings";
 
 interface ProductCardProps {
   id: string;
@@ -23,8 +24,8 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
   const [isInWishlist, setIsInWishlist] = useState(false);
   const { addToCart } = useCart();
   const { currentUser } = useAuth();
+  const { settings } = useStoreSettings();
 
-  // Check if product is in wishlist
   useEffect(() => {
     const checkWishlist = async () => {
       if (!currentUser) return;
@@ -56,6 +57,7 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
       price,
       image,
       quantity: 1,
+      category,
     });
     
     toast.success("Added to cart");
@@ -74,7 +76,6 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
       const userRef = doc(db, "users", currentUser.uid);
       const userSnap = await getDoc(userRef);
       
-      // Create the user document if it doesn't exist
       if (!userSnap.exists()) {
         await setDoc(userRef, {
           email: currentUser.email,
@@ -84,14 +85,12 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
       }
       
       if (isInWishlist) {
-        // Remove from wishlist
         await updateDoc(userRef, {
           wishlist: arrayRemove(id)
         });
         setIsInWishlist(false);
         toast.success("Removed from wishlist");
       } else {
-        // Add to wishlist
         await updateDoc(userRef, {
           wishlist: arrayUnion(id)
         });
@@ -124,21 +123,18 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
           className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
         />
         
-        {/* Featured badge */}
         {featured && (
           <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-1 rounded-full">
             Featured
           </div>
         )}
         
-        {/* Category tag */}
         {category && (
           <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
             {category}
           </div>
         )}
         
-        {/* Quick action buttons */}
         <div className={`absolute bottom-2 inset-x-2 flex items-center justify-center gap-2 transition-all duration-300 ${
           isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
         }`}>
@@ -173,7 +169,7 @@ export const ProductCard = ({ id, title, price, image, category, featured }: Pro
         <h3 className="text-sm font-medium text-gray-900 mb-1 line-clamp-1 group-hover:text-primary transition-colors">
           {title}
         </h3>
-        <p className="text-sm font-semibold text-gray-900">${price.toFixed(2)}</p>
+        <p className="text-sm font-semibold text-gray-900">{formatPrice(price, settings)}</p>
       </div>
     </Link>
   );

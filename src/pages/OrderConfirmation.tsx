@@ -5,10 +5,21 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/context/CartContext";
-import { Check, ShoppingBag } from "lucide-react";
+import { Check, ShoppingBag, X } from "lucide-react";
 import { toast } from "sonner";
-import { useCreateOrder, Order } from "@/hooks/useRealtimeOrders"; // Updated import to use realtime orders
+import { useCreateOrder, Order } from "@/hooks/useRealtimeOrders";
 import { useAuth } from "@/context/AuthContext";
+import { formatPrice } from "@/lib/storeSettings";
+import { useStoreSettings } from "@/hooks/useStoreSettings";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const OrderConfirmation = () => {
   const location = useLocation();
@@ -20,6 +31,8 @@ const OrderConfirmation = () => {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const orderProcessedRef = useRef(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const { settings } = useStoreSettings();
   
   // Get order details from location state
   const orderDetails = location.state?.orderDetails;
@@ -63,7 +76,8 @@ const OrderConfirmation = () => {
           quantity: item.quantity,
           image: item.image || "",
           color: item.color || "",
-          size: item.size || ""
+          size: item.size || "",
+          category: item.category || ""
         }));
         
         // Create new order with required fields
@@ -105,6 +119,8 @@ const OrderConfirmation = () => {
         // Clear cart after successful order
         clearCart();
         
+        // Show the confirmation dialog that won't auto-close
+        setShowConfirmation(true);
         toast.success("Order placed successfully!");
       } catch (error) {
         console.error("Error creating order:", error);
@@ -185,13 +201,13 @@ const OrderConfirmation = () => {
               
               <div className="flex justify-between py-2">
                 <span className="font-semibold">Total Amount</span>
-                <span className="font-semibold">${orderDetails.total.toFixed(2)}</span>
+                <span className="font-semibold">{formatPrice(orderDetails.total, settings)}</span>
               </div>
               
               {orderDetails.discount > 0 && (
                 <div className="flex justify-between py-2 text-green-600">
                   <span>Discount Applied</span>
-                  <span>-${orderDetails.discount.toFixed(2)}</span>
+                  <span>-{formatPrice(orderDetails.discount, settings)}</span>
                 </div>
               )}
             </div>
@@ -264,6 +280,56 @@ const OrderConfirmation = () => {
       </main>
       
       <Footer />
+      
+      {/* Order confirmation dialog that stays open until user dismisses it */}
+      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <div className="flex justify-between items-center">
+              <AlertDialogTitle className="text-lg font-bold">Order Placed Successfully!</AlertDialogTitle>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6" 
+                onClick={() => setShowConfirmation(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <AlertDialogDescription>
+              Your order has been successfully created and is being processed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="border rounded-md p-4 mb-4 bg-secondary/30">
+            <div className="flex justify-between mb-2">
+              <span className="font-medium">Order ID:</span>
+              <span>{orderId || "Processing..."}</span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="font-medium">Date:</span>
+              <span>{new Date().toLocaleDateString()}</span>
+            </div>
+            <div className="flex justify-between mb-2">
+              <span className="font-medium">Total:</span>
+              <span>{formatPrice(orderDetails.total, settings)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-medium">Status:</span>
+              <span className="text-amber-600 font-medium">Processing</span>
+            </div>
+          </div>
+          
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => {
+              setShowConfirmation(false);
+              navigate("/account");
+            }}>
+              View Order History
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

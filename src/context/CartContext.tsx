@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, ReactNode } from "react";
 import { trackCartAddition } from "@/hooks/useAnalytics";
+import { formatPrice } from "@/lib/storeSettings";
 
 interface CartItem {
   id: string;
@@ -9,6 +10,7 @@ interface CartItem {
   quantity: number;
   color?: string;
   size?: string;
+  category?: string;
 }
 
 interface CartState {
@@ -106,7 +108,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const addToCart = (item: CartItem) => {
     dispatch({ type: "ADD_ITEM", payload: item });
-    // Track cart addition for analytics
     trackCartAddition(item.id, item.title)
       .catch(error => console.error("Failed to track cart addition:", error));
   };
