@@ -39,26 +39,35 @@ const OrderConfirmation = () => {
   const [orderSummaryId, setOrderSummaryId] = useState<string | null>(null);
   const dialogForcedOpenRef = useRef(true);
   const userClosedDialogRef = useRef(false);
+  const userNavigatedAwayRef = useRef(false);
   
   const orderDetails = location.state?.orderDetails;
   
+  // Force dialog to stay open for a minimum amount of time (20 seconds)
   useEffect(() => {
-    // Force dialog to stay open for a minimum amount of time
     if (dialogForcedOpenRef.current) {
       const timer = setTimeout(() => {
+        console.log("Forced open period ended");
         dialogForcedOpenRef.current = false;
-      }, 10000); // Force dialog to stay open for at least 10 seconds
+      }, 20000); // Force dialog to stay open for at least 20 seconds
       
       return () => clearTimeout(timer);
     }
   }, []);
   
   useEffect(() => {
+    // Reset state on component mount
     setShowConfirmation(true);
+    userClosedDialogRef.current = false;
+    userNavigatedAwayRef.current = false;
     
     if (!orderDetails || cartState.items.length === 0) {
-      console.log("No order details or empty cart, redirecting to home");
-      navigate("/");
+      console.log("No order details or empty cart, NOT redirecting to home");
+      // Don't redirect to avoid immediate navigation
+      // Only redirect if user actively came to this page without order details
+      if (!location.state) {
+        navigate("/");
+      }
       return;
     }
     
@@ -125,7 +134,7 @@ const OrderConfirmation = () => {
         console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
         
-        // Create order summary in realtime database
+        // Create order summary in Firestore
         const orderSummary = {
           userId: currentUser?.uid || "guest",
           orderId: createdOrder.id,
@@ -141,18 +150,12 @@ const OrderConfirmation = () => {
           })),
           shippingAddress: orderDetails.shippingAddress,
           viewed: false,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          discount: orderDetails.discount > 0 ? orderDetails.discount : undefined,
+          couponCode: orderDetails.couponCode || undefined
         };
         
-        if (orderDetails.discount > 0) {
-          orderSummary.discount = orderDetails.discount;
-        }
-        
-        if (orderDetails.couponCode) {
-          orderSummary.couponCode = orderDetails.couponCode;
-        }
-        
-        console.log("Creating order summary in realtime database");
+        console.log("Creating order summary in Firestore");
         const createdSummary = await createOrderSummary(orderSummary);
         console.log("Order summary created with ID:", createdSummary.id);
         setOrderSummaryId(createdSummary.id);
@@ -202,39 +205,62 @@ const OrderConfirmation = () => {
     };
     
     createNewOrder();
-  }, [orderDetails, cartState, navigate, clearCart, createOrder, createOrderSummary, currentUser?.uid, orderProcessed]);
+  }, [orderDetails, cartState, navigate, clearCart, createOrder, createOrderSummary, currentUser?.uid, orderProcessed, location.state]);
   
+  // Handle dialog close attempts
   const handleDialogClose = (open: boolean) => {
     if (!open) {
-      if (!isLoading) {
-        // Always prevent closing if we are in the forced open period
-        if (dialogForcedOpenRef.current) {
-          console.log("Preventing dialog close - forced open period");
-          setShowConfirmation(true);
-          return;
-        }
-        
-        // User explicitly closed the dialog
-        userClosedDialogRef.current = true;
-        console.log("User closed order summary dialog");
-        setShowConfirmation(false);
-        
-        // Don't automatically navigate away - let the user decide by clicking buttons
-      } else {
-        console.log("Preventing dialog close - still loading");
+      // Prevent closing if loading or in forced open period
+      if (isLoading || dialogForcedOpenRef.current) {
+        console.log("Prevented dialog close - " + (isLoading ? "still loading" : "forced open period"));
         setShowConfirmation(true);
+        return;
       }
+      
+      // User explicitly closed the dialog
+      console.log("User closed order summary dialog");
+      userClosedDialogRef.current = true;
+      setShowConfirmation(false);
+      
+      // Don't automatically navigate away - let the user decide by clicking buttons
     }
   };
   
-  // This useEffect ensures the dialog stays open even if other 
-  // toast notifications or events try to close it
+  // This useEffect ensures the dialog stays open when it should
   useEffect(() => {
     if (!showConfirmation && (dialogForcedOpenRef.current || isLoading) && !userClosedDialogRef.current) {
       console.log("Dialog closed but should be open, reopening");
       setShowConfirmation(true);
     }
   }, [showConfirmation, isLoading]);
+  
+  // Prevent navigation while dialog is forcibly open
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (dialogForcedOpenRef.current && !userNavigatedAwayRef.current) {
+        e.preventDefault();
+        e.returnValue = "Your order confirmation is still open. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
+  
+  // Handle navigation through buttons
+  const handleNavigation = (path: string) => {
+    // Only allow navigation if not in forced open period or user explicitly closed dialog
+    if (!dialogForcedOpenRef.current || userClosedDialogRef.current) {
+      userNavigatedAwayRef.current = true;
+      navigate(path);
+    } else {
+      // If in forced open period, let user know they need to wait
+      toast.info("Please wait a moment before navigating away from your order confirmation.", {
+        duration: 3000,
+      });
+    }
+  };
   
   if (!orderDetails) {
     return (
@@ -367,16 +393,10 @@ const OrderConfirmation = () => {
           </div>
           
           <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <Button variant="outline" onClick={() => {
-              userClosedDialogRef.current = true;
-              navigate("/account");
-            }}>
+            <Button variant="outline" onClick={() => handleNavigation("/account")}>
               View Order History
             </Button>
-            <Button onClick={() => {
-              userClosedDialogRef.current = true;
-              navigate("/products");
-            }}>
+            <Button onClick={() => handleNavigation("/products")}>
               <ShoppingBag className="mr-2 h-4 w-4" />
               Continue Shopping
             </Button>
@@ -402,7 +422,6 @@ const OrderConfirmation = () => {
                   if (!isLoading && !dialogForcedOpenRef.current) {
                     userClosedDialogRef.current = true;
                     setShowConfirmation(false);
-                    // Don't automatically redirect - let user decide
                   }
                 }}
                 disabled={isLoading || dialogForcedOpenRef.current}
@@ -414,7 +433,7 @@ const OrderConfirmation = () => {
               Your order has been successfully created and is being processed.
               {dialogForcedOpenRef.current && (
                 <span className="block text-xs text-muted-foreground mt-1">
-                  This confirmation will stay open for at least 10 seconds to ensure you see all details.
+                  This confirmation will stay open for at least 20 seconds to ensure you see all details.
                 </span>
               )}
             </AlertDialogDescription>
@@ -457,6 +476,7 @@ const OrderConfirmation = () => {
             <AlertDialogAction 
               onClick={() => {
                 userClosedDialogRef.current = true;
+                userNavigatedAwayRef.current = true;
                 setShowConfirmation(false);
                 navigate("/account");
               }}
