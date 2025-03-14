@@ -38,6 +38,7 @@ const OrderConfirmation = () => {
   const { settings } = useStoreSettings();
   const [orderSummaryId, setOrderSummaryId] = useState<string | null>(null);
   const dialogForcedOpenRef = useRef(true);
+  const userClosedDialogRef = useRef(false);
   
   const orderDetails = location.state?.orderDetails;
   
@@ -213,13 +214,13 @@ const OrderConfirmation = () => {
           return;
         }
         
-        if (orderId) {
-          console.log("Manual dialog close - allowing");
-          setShowConfirmation(false);
-        } else {
-          console.log("Preventing dialog close - no order ID yet");
-          setShowConfirmation(true);
-        }
+        // User explicitly closed the dialog
+        userClosedDialogRef.current = true;
+        console.log("User closed order summary dialog");
+        setShowConfirmation(false);
+        
+        // Now that the user has explicitly closed the dialog, redirect to home
+        navigate("/");
       } else {
         console.log("Preventing dialog close - still loading");
         setShowConfirmation(true);
@@ -230,11 +231,11 @@ const OrderConfirmation = () => {
   // This useEffect ensures the dialog stays open even if other 
   // toast notifications or events try to close it
   useEffect(() => {
-    if (!showConfirmation && (dialogForcedOpenRef.current || isLoading || !orderId)) {
+    if (!showConfirmation && (dialogForcedOpenRef.current || isLoading) && !userClosedDialogRef.current) {
       console.log("Dialog closed but should be open, reopening");
       setShowConfirmation(true);
     }
-  }, [showConfirmation, isLoading, orderId]);
+  }, [showConfirmation, isLoading]);
   
   if (!orderDetails) {
     return (
@@ -367,10 +368,16 @@ const OrderConfirmation = () => {
           </div>
           
           <div className="flex flex-col md:flex-row gap-4 justify-center">
-            <Button variant="outline" onClick={() => navigate("/account")}>
+            <Button variant="outline" onClick={() => {
+              userClosedDialogRef.current = true;
+              navigate("/account");
+            }}>
               View Order History
             </Button>
-            <Button onClick={() => navigate("/products")}>
+            <Button onClick={() => {
+              userClosedDialogRef.current = true;
+              navigate("/products");
+            }}>
               <ShoppingBag className="mr-2 h-4 w-4" />
               Continue Shopping
             </Button>
@@ -393,11 +400,13 @@ const OrderConfirmation = () => {
                 size="icon" 
                 className="h-6 w-6" 
                 onClick={() => {
-                  if (!isLoading && orderId && !dialogForcedOpenRef.current) {
+                  if (!isLoading && !dialogForcedOpenRef.current) {
+                    userClosedDialogRef.current = true;
                     setShowConfirmation(false);
+                    navigate("/");
                   }
                 }}
-                disabled={isLoading || !orderId || dialogForcedOpenRef.current}
+                disabled={isLoading || dialogForcedOpenRef.current}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -448,10 +457,11 @@ const OrderConfirmation = () => {
           <AlertDialogFooter>
             <AlertDialogAction 
               onClick={() => {
+                userClosedDialogRef.current = true;
                 setShowConfirmation(false);
                 navigate("/account");
               }}
-              disabled={isLoading || !orderId || dialogForcedOpenRef.current}
+              disabled={isLoading || dialogForcedOpenRef.current}
             >
               {dialogForcedOpenRef.current ? "Please wait..." : "View Order History"}
             </AlertDialogAction>
