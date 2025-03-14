@@ -15,7 +15,7 @@ export function ToastProvider() {
         duration: 3000,
         className: "my-toast-class",
         style: {
-          zIndex: 9999, // Ensure toasts appear above dialogs
+          zIndex: 40, // Reduced z-index so it doesn't overlay critical UI elements
         },
       }}
     />
