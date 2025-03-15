@@ -1,5 +1,5 @@
 
-import { Resend } from 'resend';
+import { sendEmailViaProxy } from './resendProxy';
 
 export async function testResendConnection() {
   // Get API key from environment
@@ -16,10 +16,8 @@ export async function testResendConnection() {
   }
   
   try {
-    const resend = new Resend(apiKey);
-    
-    // Try sending a test email
-    const response = await resend.emails.send({
+    // Use our proxy to send a test email
+    const response = await sendEmailViaProxy({
       from: 'onboarding@resend.dev', // Resend's default sender for testing
       to: 'delivered@resend.dev', // Resend's test recipient that always succeeds
       subject: 'Test Email Connection',
@@ -28,11 +26,19 @@ export async function testResendConnection() {
     
     console.log('Resend test response:', response);
     
-    return {
-      success: true,
-      message: 'Successfully connected to Resend API and sent test email',
-      response
-    };
+    if (response.success) {
+      return {
+        success: true,
+        message: 'Successfully connected to Resend API and sent test email',
+        response: response.data
+      };
+    } else {
+      return {
+        success: false,
+        message: `Failed to connect to Resend: ${response.error}`,
+        error: response.error
+      };
+    }
   } catch (error) {
     console.error('Error testing Resend connection:', error);
     return {

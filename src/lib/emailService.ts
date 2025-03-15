@@ -1,10 +1,8 @@
 
-import { Resend } from 'resend';
+import { sendEmailViaProxy } from './resendProxy';
 
-// Initialize with API key from environment variables
-// Make sure to use the correct variable name as defined in .env
+// Check for API key from environment variables
 const resendApiKey = import.meta.env.VITE_RESEND_API_KEY;
-const resend = new Resend(resendApiKey);
 
 interface OrderEmailData {
   orderId: string;
@@ -27,15 +25,15 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData, htmlTempl
     
     console.log(`Attempting to send email to ${data.customerEmail} for order ${data.orderId}`);
     
-    const response = await resend.emails.send({
-      from: 'onboarding@resend.dev', // Use Resend's default sender or your verified domain
+    const response = await sendEmailViaProxy({
+      from: 'onboarding@resend.dev', // Resend's default sender or your verified domain
       to: data.customerEmail,
       subject: `Order Confirmation #${data.orderId}`,
       html: htmlTemplate,
     });
 
     console.log('Email response from Resend:', response);
-    return { success: true, data: response };
+    return response;
   } catch (error) {
     console.error('Failed to send order confirmation email:', error);
     return { success: false, error };
@@ -55,15 +53,15 @@ export async function sendAdminNotificationEmail(
     
     console.log(`Attempting to send admin notification to ${adminEmail} for order ${data.orderId}`);
     
-    const response = await resend.emails.send({
-      from: 'onboarding@resend.dev', // Use Resend's default sender or your verified domain
+    const response = await sendEmailViaProxy({
+      from: 'onboarding@resend.dev', // Resend's default sender or your verified domain
       to: adminEmail,
       subject: `New Order Received #${data.orderId}`,
       html: htmlTemplate,
     });
 
     console.log('Admin notification email response:', response);
-    return { success: true, data: response };
+    return response;
   } catch (error) {
     console.error('Failed to send admin notification email:', error);
     return { success: false, error };
