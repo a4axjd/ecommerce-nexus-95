@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -14,6 +13,47 @@ import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { sendOrderConfirmationEmail } from "@/lib/emailService";
 import { generateOrderConfirmationEmailTemplate } from "@/lib/emailTemplates";
 import { useCreateOrderSummary } from "@/hooks/useOrderSummaries";
+
+const sendOrderEmails = async (orderId: string, customerData: any, orderItems: any[], total: number) => {
+  try {
+    console.log("Starting email sending process...");
+    
+    const emailData = {
+      orderId,
+      customerName: customerData.name,
+      customerEmail: customerData.email,
+      orderItems,
+      total,
+      shippingAddress: customerData
+    };
+    
+    console.log("Email data prepared:", emailData);
+    
+    const emailTemplate = generateOrderConfirmationEmailTemplate({
+      orderNumber: orderId,
+      customerName: customerData.name,
+      orderItems,
+      total,
+      shippingAddress: customerData
+    });
+    
+    console.log("Email template generated, sending email now...");
+    
+    const emailResult = await sendOrderConfirmationEmail(emailData, emailTemplate);
+    console.log("Email sending result:", emailResult);
+    
+    if (emailResult.success) {
+      console.log("Email sent successfully!");
+    } else {
+      console.error("Failed to send email:", emailResult.error);
+    }
+    
+    return emailResult;
+  } catch (error) {
+    console.error("Error in sendOrderEmails function:", error);
+    return { success: false, error };
+  }
+};
 
 const OrderConfirmation = () => {
   const location = useLocation();
@@ -32,7 +72,6 @@ const OrderConfirmation = () => {
   const orderDetails = location.state?.orderDetails;
   
   useEffect(() => {
-    // Reset state on component mount
     if (!orderDetails || cartState.items.length === 0) {
       console.log("No order details or empty cart, redirecting to home");
       if (!location.state) {
@@ -104,7 +143,6 @@ const OrderConfirmation = () => {
         console.log("Order created successfully with ID:", createdOrder.id);
         setOrderId(createdOrder.id);
         
-        // Create order summary in Firestore - make sure we don't pass undefined values
         const orderSummary = {
           userId: currentUser?.uid || "guest",
           orderId: createdOrder.id,
@@ -121,7 +159,6 @@ const OrderConfirmation = () => {
           shippingAddress: orderDetails.shippingAddress,
           viewed: false,
           createdAt: Date.now(),
-          // Only add these fields if they have values
           ...(orderDetails.discount > 0 ? { discount: orderDetails.discount } : {}),
           ...(orderDetails.couponCode ? { couponCode: orderDetails.couponCode } : {})
         };
@@ -134,27 +171,17 @@ const OrderConfirmation = () => {
         if (orderDetails.shippingAddress.email) {
           try {
             console.log("Sending order confirmation email");
-            const emailData = {
-              orderId: createdOrder.id,
-              customerName: orderDetails.shippingAddress.name,
-              customerEmail: orderDetails.shippingAddress.email,
-              orderItems: orderItems,
-              total: orderDetails.total,
-              shippingAddress: orderDetails.shippingAddress
-            };
-            
-            const emailTemplate = generateOrderConfirmationEmailTemplate({
-              orderNumber: createdOrder.id,
-              customerName: orderDetails.shippingAddress.name,
-              orderItems: orderItems,
-              total: orderDetails.total,
-              shippingAddress: orderDetails.shippingAddress
-            });
-            
-            await sendOrderConfirmationEmail(emailData, emailTemplate);
+            await sendOrderEmails(
+              createdOrder.id,
+              orderDetails.shippingAddress,
+              orderItems,
+              orderDetails.total
+            );
           } catch (emailError) {
             console.error("Failed to send confirmation email:", emailError);
           }
+        } else {
+          console.log("No customer email provided, skipping email sending");
         }
         
         clearCart();
