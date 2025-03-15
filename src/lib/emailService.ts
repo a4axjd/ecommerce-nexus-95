@@ -54,7 +54,7 @@ export async function sendAdminNotificationEmail(
     console.log(`Attempting to send admin notification to ${adminEmail} for order ${data.orderId}`);
     
     const response = await sendEmailViaProxy({
-      from: 'onboarding@resend.dev', // Resend's default sender or your verified domain
+      from: 'info@asjad.co', // Resend's default sender or your verified domain
       to: adminEmail,
       subject: `New Order Received #${data.orderId}`,
       html: htmlTemplate,
