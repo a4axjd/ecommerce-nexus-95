@@ -26,7 +26,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData, htmlTempl
     console.log(`Attempting to send email to ${data.customerEmail} for order ${data.orderId}`);
     
     const response = await sendEmailViaProxy({
-      from: 'onboarding@resend.dev', // Resend's default sender or your verified domain
+      from: 'info@asjad.co', // Resend's default sender or your verified domain
       to: data.customerEmail,
       subject: `Order Confirmation #${data.orderId}`,
       html: htmlTemplate,
