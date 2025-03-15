@@ -29,7 +29,7 @@ export async function testResendConnection() {
     if (response.success) {
       return {
         success: true,
-        message: 'Successfully connected to Resend API and sent test email',
+        message: 'Successfully tested email functionality (mock response in browser environment)',
         response: response.data
       };
     } else {
