@@ -32,7 +32,7 @@ export async function sendEmailViaProxy(emailData: EmailData) {
   
   try {
     // Use the Resend SDK directly instead of fetch
-    const response = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: emailData.from,
       to: emailData.to,
       subject: emailData.subject,
@@ -40,8 +40,13 @@ export async function sendEmailViaProxy(emailData: EmailData) {
       text: emailData.text,
     });
     
-    console.log('Email sent successfully via proxy:', response);
-    return { success: true, data: response };
+    if (error) {
+      console.error('Failed to send email via Resend SDK:', error);
+      return { success: false, error: error.message };
+    }
+    
+    console.log('Email sent successfully via proxy:', data);
+    return { success: true, data };
   } catch (error) {
     console.error('Failed to send email via proxy:', error);
     return { 
