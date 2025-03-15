@@ -11,7 +11,8 @@ import { useCreateOrder, Order } from "@/hooks/useRealtimeOrders";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/storeSettings";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
-import { sendOrderConfirmationEmail } from "@/lib/notifications";
+import { sendOrderConfirmationEmail } from "@/lib/emailService";
+import { generateOrderConfirmationEmailTemplate } from "@/lib/emailTemplates";
 import { useCreateOrderSummary } from "@/hooks/useOrderSummaries";
 
 const OrderConfirmation = () => {
@@ -133,15 +134,24 @@ const OrderConfirmation = () => {
         if (orderDetails.shippingAddress.email) {
           try {
             console.log("Sending order confirmation email");
-            await sendOrderConfirmationEmail(
-              orderDetails.shippingAddress.email,
-              {
-                orderId: createdOrder.id,
-                items: orderItems,
-                total: orderDetails.total,
-                shippingAddress: orderDetails.shippingAddress
-              }
-            );
+            const emailData = {
+              orderId: createdOrder.id,
+              customerName: orderDetails.shippingAddress.name,
+              customerEmail: orderDetails.shippingAddress.email,
+              orderItems: orderItems,
+              total: orderDetails.total,
+              shippingAddress: orderDetails.shippingAddress
+            };
+            
+            const emailTemplate = generateOrderConfirmationEmailTemplate({
+              orderNumber: createdOrder.id,
+              customerName: orderDetails.shippingAddress.name,
+              orderItems: orderItems,
+              total: orderDetails.total,
+              shippingAddress: orderDetails.shippingAddress
+            });
+            
+            await sendOrderConfirmationEmail(emailData, emailTemplate);
           } catch (emailError) {
             console.error("Failed to send confirmation email:", emailError);
           }
