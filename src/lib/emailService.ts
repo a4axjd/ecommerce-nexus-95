@@ -30,7 +30,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData, htmlTempl
     };
     
     const result = await sendEmailWithEmailJS(
-      import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CONFIRMATION || '', 
+      import.meta.env.EMAILJS_TEMPLATE_ID_CONFIRMATION || '', 
       templateParams
     );
     
@@ -66,7 +66,7 @@ export async function sendAdminNotificationEmail(
     };
     
     const result = await sendEmailWithEmailJS(
-      import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ADMIN || '',
+      import.meta.env.EMAILJS_TEMPLATE_ID_ADMIN || '',
       templateParams
     );
     
@@ -108,7 +108,7 @@ export async function sendStatusUpdateEmail(
     };
     
     const result = await sendEmailWithEmailJS(
-      import.meta.env.VITE_EMAILJS_TEMPLATE_ID_STATUS || '',
+      import.meta.env.EMAILJS_TEMPLATE_ID_STATUS || '',
       templateParams
     );
     
@@ -121,8 +121,8 @@ export async function sendStatusUpdateEmail(
 
 export async function sendEmailWithEmailJS(templateId: string, templateParams: Record<string, any>) {
   try {
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || '';
-    const userId = import.meta.env.VITE_EMAILJS_USER_ID || '';
+    const serviceId = import.meta.env.EMAILJS_SERVICE_ID || '';
+    const userId = import.meta.env.EMAILJS_USER_ID || '';
     
     if (!serviceId || !userId || !templateId) {
       console.error('Missing EmailJS configuration. Check your .env file.');
@@ -163,7 +163,7 @@ function getStatusMessage(status: string): string {
 
 // Initialize EmailJS
 export function initEmailJS() {
-  const userId = import.meta.env.VITE_EMAILJS_USER_ID;
+  const userId = import.meta.env.EMAILJS_USER_ID;
   if (userId) {
     emailjs.init(userId);
     console.log('EmailJS initialized');
