@@ -1,30 +1,8 @@
 
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { testResendConnection } from "@/lib/testResend";
 
 const About = () => {
-  const [testingEmail, setTestingEmail] = useState(false);
-  
-  const handleTestResend = async () => {
-    setTestingEmail(true);
-    try {
-      const result = await testResendConnection();
-      if (result.success) {
-        toast.success("Successfully connected to Resend API");
-      } else {
-        toast.error(result.message);
-      }
-    } catch (error) {
-      toast.error("Failed to test Resend connection");
-    } finally {
-      setTestingEmail(false);
-    }
-  };
-  
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
@@ -46,22 +24,6 @@ const About = () => {
                 sustainability, and timeless style. Each product in our store is carefully selected
                 to ensure it meets our high standards and your expectations.
               </p>
-              
-              {/* Developer tools section - remove in production */}
-              <div className="mt-8 p-4 border border-dashed border-gray-300 rounded-md">
-                <h3 className="text-sm font-semibold mb-2">Developer Tools</h3>
-                <Button 
-                  onClick={handleTestResend} 
-                  disabled={testingEmail}
-                  size="sm"
-                  variant="outline"
-                >
-                  {testingEmail ? "Testing..." : "Test Resend Email API"}
-                </Button>
-                <p className="text-xs text-muted-foreground mt-2">
-                  This button tests the connection to Resend API. Check console logs for details.
-                </p>
-              </div>
             </div>
             
             <div className="relative h-[400px] rounded-lg overflow-hidden">

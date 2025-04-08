@@ -11,7 +11,6 @@ import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/storeSettings";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
 import { sendOrderConfirmationEmail } from "@/lib/emailService";
-import { generateOrderConfirmationEmailTemplate } from "@/lib/emailTemplates";
 import { useCreateOrderSummary } from "@/hooks/useOrderSummaries";
 
 const sendOrderEmails = async (orderId: string, customerData: any, orderItems: any[], total: number) => {
@@ -29,13 +28,11 @@ const sendOrderEmails = async (orderId: string, customerData: any, orderItems: a
     
     console.log("Email data prepared:", emailData);
     
-    const emailTemplate = generateOrderConfirmationEmailTemplate({
-      orderNumber: orderId,
-      customerName: customerData.name,
-      orderItems,
-      total,
-      shippingAddress: customerData
-    });
+    const emailTemplate = `
+      <h1>Order Confirmation #${orderId}</h1>
+      <p>Thank you for your order, ${customerData.name}!</p>
+      <p>Your order has been received and is being processed.</p>
+    `;
     
     console.log("Email template generated, sending email now...");
     
