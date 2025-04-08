@@ -30,7 +30,7 @@ export async function sendOrderConfirmationEmail(data: OrderEmailData, htmlTempl
     };
     
     const result = await sendEmailWithEmailJS(
-      process.env.EMAILJS_TEMPLATE_ID_CONFIRMATION || '', 
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID_CONFIRMATION || process.env.EMAILJS_TEMPLATE_ID_CONFIRMATION || '', 
       templateParams
     );
     
@@ -66,7 +66,7 @@ export async function sendAdminNotificationEmail(
     };
     
     const result = await sendEmailWithEmailJS(
-      process.env.EMAILJS_TEMPLATE_ID_ADMIN || '',
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID_ADMIN || process.env.EMAILJS_TEMPLATE_ID_ADMIN || '',
       templateParams
     );
     
@@ -77,10 +77,52 @@ export async function sendAdminNotificationEmail(
   }
 }
 
+export async function sendStatusUpdateEmail(
+  orderData: {
+    id: string;
+    customerName: string;
+    customerEmail: string;
+    status: string;
+    items: any[];
+    totalAmount: number;
+    shippingAddress: any;
+  }
+) {
+  try {
+    console.log(`Sending status update email to ${orderData.customerEmail} for order ${orderData.id}`);
+    
+    const templateParams = {
+      order_id: orderData.id,
+      customer_name: orderData.customerName || orderData.shippingAddress.name,
+      customer_email: orderData.customerEmail || orderData.shippingAddress.email,
+      order_status: orderData.status.toUpperCase(),
+      order_date: new Date().toLocaleDateString(),
+      order_total: `$${orderData.totalAmount.toFixed(2)}`,
+      shipping_address: `${orderData.shippingAddress.address}, ${orderData.shippingAddress.city}, ${orderData.shippingAddress.state || ''} ${orderData.shippingAddress.postalCode || ''}`,
+      status_message: getStatusMessage(orderData.status),
+      order_items: JSON.stringify(orderData.items.map((item: any) => ({
+        name: item.title,
+        quantity: item.quantity,
+        price: `$${item.price?.toFixed(2)}`
+      })) || [])
+    };
+    
+    const result = await sendEmailWithEmailJS(
+      import.meta.env.VITE_EMAILJS_TEMPLATE_ID_STATUS || process.env.EMAILJS_TEMPLATE_ID_STATUS || '',
+      templateParams
+    );
+    
+    return result;
+  } catch (error) {
+    console.error('Failed to send status update email:', error);
+    return { success: false, error };
+  }
+}
+
 export async function sendEmailWithEmailJS(templateId: string, templateParams: Record<string, any>) {
   try {
-    const serviceId = process.env.EMAILJS_SERVICE_ID || '';
-    const userId = process.env.EMAILJS_USER_ID || '';
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || process.env.EMAILJS_SERVICE_ID || '';
+    const userId = import.meta.env.VITE_EMAILJS_USER_ID || process.env.EMAILJS_USER_ID || '';
     
     if (!serviceId || !userId || !templateId) {
       console.error('Missing EmailJS configuration. Check your .env file.');
@@ -104,9 +146,24 @@ export async function sendEmailWithEmailJS(templateId: string, templateParams: R
   }
 }
 
+function getStatusMessage(status: string): string {
+  switch (status.toLowerCase()) {
+    case 'processing':
+      return "Your order is now being processed. We're preparing your items for shipment.";
+    case 'shipped':
+      return "Great news! Your order has been shipped and is on its way to you.";
+    case 'delivered':
+      return "Your order has been delivered. We hope you enjoy your purchase!";
+    case 'cancelled':
+      return "Your order has been cancelled. If you have questions, please contact customer support.";
+    default:
+      return "Your order status has been updated.";
+  }
+}
+
 // Initialize EmailJS
 export function initEmailJS() {
-  const userId = process.env.EMAILJS_USER_ID;
+  const userId = import.meta.env.VITE_EMAILJS_USER_ID || process.env.EMAILJS_USER_ID;
   if (userId) {
     emailjs.init(userId);
     console.log('EmailJS initialized');

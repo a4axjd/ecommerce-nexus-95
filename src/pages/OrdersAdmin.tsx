@@ -30,6 +30,10 @@ import { format } from "date-fns";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { ref, query as dbQuery, orderByChild, startAt, onValue, off } from "firebase/database";
 import { rtdb } from "@/lib/firebase";
+import { sendStatusUpdateEmail, initEmailJS } from "@/lib/emailService";
+
+// Initialize EmailJS
+initEmailJS();
 
 const OrdersAdmin = () => {
   const { data: orders = [], isLoading, refetch } = useOrders();
@@ -115,6 +119,31 @@ const OrdersAdmin = () => {
     try {
       await updateOrderStatus.mutateAsync({ id: orderId, status: newStatus });
       toast.success(`Order status updated to ${newStatus}`);
+      
+      // Find the updated order details
+      const updatedOrder = orders.find(order => order.id === orderId);
+      
+      if (updatedOrder && updatedOrder.shippingAddress.email) {
+        // Send status update email
+        const emailData = {
+          id: updatedOrder.id,
+          customerName: updatedOrder.shippingAddress.name,
+          customerEmail: updatedOrder.shippingAddress.email,
+          status: newStatus,
+          items: updatedOrder.items,
+          totalAmount: updatedOrder.totalAmount,
+          shippingAddress: updatedOrder.shippingAddress
+        };
+        
+        toast.info("Sending status update email to customer...");
+        const emailResult = await sendStatusUpdateEmail(emailData);
+        
+        if (emailResult.success) {
+          toast.success("Status update email sent successfully");
+        } else {
+          toast.error("Failed to send status update email");
+        }
+      }
       
       refetch();
     } catch (error) {

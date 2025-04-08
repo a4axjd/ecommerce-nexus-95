@@ -34,35 +34,42 @@ const sendOrderEmails = async (orderId: string, customerData: any, orderItems: a
     
     const emailTemplate = `Order Confirmation #${orderId}`;
     
-    // Send email to customer
-    const customerEmailResult = await sendOrderConfirmationEmail(emailData, emailTemplate);
-    
-    if (customerEmailResult.success) {
-      console.log("Customer email sent successfully!");
-    } else {
-      console.error("Failed to send customer email:", customerEmailResult.error);
-    }
-    
-    // Send notification to admin
-    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
-    
-    if (adminEmail) {
-      const adminEmailResult = await sendAdminNotificationEmail(
-        adminEmail, 
-        emailData, 
-        `New Order #${orderId}`
-      );
+    // Only send email if customer provided an email
+    if (customerData.email) {
+      // Send email to customer
+      const customerEmailResult = await sendOrderConfirmationEmail(emailData, emailTemplate);
       
-      if (adminEmailResult.success) {
-        console.log("Admin notification email sent successfully!");
+      if (customerEmailResult.success) {
+        console.log("Customer email sent successfully!");
+        toast.success("Order confirmation email sent");
       } else {
-        console.error("Failed to send admin email:", adminEmailResult.error);
+        console.error("Failed to send customer email:", customerEmailResult.error);
+        toast.error("Failed to send confirmation email");
+      }
+      
+      // Send notification to admin
+      const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
+      
+      if (adminEmail) {
+        const adminEmailResult = await sendAdminNotificationEmail(
+          adminEmail, 
+          emailData, 
+          `New Order #${orderId}`
+        );
+        
+        if (adminEmailResult.success) {
+          console.log("Admin notification email sent successfully!");
+        } else {
+          console.error("Failed to send admin email:", adminEmailResult.error);
+        }
+      } else {
+        console.warn("Admin email not configured. Skipping admin notification.");
       }
     } else {
-      console.warn("Admin email not configured. Skipping admin notification.");
+      console.log("No customer email provided, skipping email sending");
     }
     
-    return customerEmailResult;
+    return { success: true };
   } catch (error) {
     console.error("Error in sendOrderEmails function:", error);
     return { success: false, error };
@@ -182,6 +189,7 @@ const OrderConfirmation = () => {
         console.log("Order summary created with ID:", createdSummary.id);
         setOrderSummaryId(createdSummary.id);
         
+        // Send confirmation emails directly
         if (orderDetails.shippingAddress.email) {
           try {
             console.log("Sending order confirmation email");
@@ -193,6 +201,7 @@ const OrderConfirmation = () => {
             );
           } catch (emailError) {
             console.error("Failed to send confirmation email:", emailError);
+            toast.error("Failed to send order confirmation email");
           }
         } else {
           console.log("No customer email provided, skipping email sending");
