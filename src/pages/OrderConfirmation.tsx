@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
@@ -10,8 +11,11 @@ import { useCreateOrder, Order } from "@/hooks/useRealtimeOrders";
 import { useAuth } from "@/context/AuthContext";
 import { formatPrice } from "@/lib/storeSettings";
 import { useStoreSettings } from "@/hooks/useStoreSettings";
-import { sendOrderConfirmationEmail } from "@/lib/emailService";
+import { sendOrderConfirmationEmail, sendAdminNotificationEmail, initEmailJS } from "@/lib/emailService";
 import { useCreateOrderSummary } from "@/hooks/useOrderSummaries";
+
+// Initialize EmailJS when component is imported
+initEmailJS();
 
 const sendOrderEmails = async (orderId: string, customerData: any, orderItems: any[], total: number) => {
   try {
@@ -28,24 +32,37 @@ const sendOrderEmails = async (orderId: string, customerData: any, orderItems: a
     
     console.log("Email data prepared:", emailData);
     
-    const emailTemplate = `
-      <h1>Order Confirmation #${orderId}</h1>
-      <p>Thank you for your order, ${customerData.name}!</p>
-      <p>Your order has been received and is being processed.</p>
-    `;
+    const emailTemplate = `Order Confirmation #${orderId}`;
     
-    console.log("Email template generated, sending email now...");
+    // Send email to customer
+    const customerEmailResult = await sendOrderConfirmationEmail(emailData, emailTemplate);
     
-    const emailResult = await sendOrderConfirmationEmail(emailData, emailTemplate);
-    console.log("Email sending result:", emailResult);
-    
-    if (emailResult.success) {
-      console.log("Email sent successfully!");
+    if (customerEmailResult.success) {
+      console.log("Customer email sent successfully!");
     } else {
-      console.error("Failed to send email:", emailResult.error);
+      console.error("Failed to send customer email:", customerEmailResult.error);
     }
     
-    return emailResult;
+    // Send notification to admin
+    const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
+    
+    if (adminEmail) {
+      const adminEmailResult = await sendAdminNotificationEmail(
+        adminEmail, 
+        emailData, 
+        `New Order #${orderId}`
+      );
+      
+      if (adminEmailResult.success) {
+        console.log("Admin notification email sent successfully!");
+      } else {
+        console.error("Failed to send admin email:", adminEmailResult.error);
+      }
+    } else {
+      console.warn("Admin email not configured. Skipping admin notification.");
+    }
+    
+    return customerEmailResult;
   } catch (error) {
     console.error("Error in sendOrderEmails function:", error);
     return { success: false, error };
